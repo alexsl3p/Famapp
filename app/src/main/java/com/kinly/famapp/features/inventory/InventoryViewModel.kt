@@ -47,6 +47,12 @@ class InventoryViewModel @Inject constructor(
         }
     }
 
+    /** Принудительная перезагрузка остатков (вызывается при открытии вкладки). */
+    fun reload() {
+        val familyId = currentFamilyId ?: return
+        viewModelScope.launch { refreshItems() }
+    }
+
     private fun subscribeRealtime(familyId: String) {
         viewModelScope.launch {
             val channel = supabase.realtime.channel("inventory-$familyId")

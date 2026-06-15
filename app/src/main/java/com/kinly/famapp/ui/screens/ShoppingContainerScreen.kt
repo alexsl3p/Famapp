@@ -39,6 +39,17 @@ fun ShoppingContainerScreen(
         Icons.Outlined.BarChart to "Статистика"
     )
 
+    // При открытии вкладок инвентаря/статистики подтягиваем свежие данные,
+    // чтобы товары, отмеченные купленными, сразу появлялись (не ждём realtime).
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 1) {
+            productViewModel.reload()
+            inventoryViewModel.reload()
+        } else if (selectedTab == 2) {
+            statsViewModel.refresh()
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier

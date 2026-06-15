@@ -81,6 +81,11 @@ class ProductViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
+    /** Перезагрузка каталога (например, после автосоздания товаров покупками). */
+    fun reload() {
+        currentFamilyId?.let { load(it) }
+    }
+
     private suspend fun searchProducts(query: String) {
         val familyId = currentFamilyId ?: return
         if (query.isBlank()) {
