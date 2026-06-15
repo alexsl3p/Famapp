@@ -88,6 +88,14 @@ dependencies {
     implementation(libs.supabase.auth)
     implementation(libs.supabase.realtime)
     implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.core)
+
+    // CameraX + MLKit barcode scanning (v0.3 scanner)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.mlkit.barcode.scanning)
 
     // Google Sign-In (legacy API — works on all devices)
     implementation(libs.play.services.auth)

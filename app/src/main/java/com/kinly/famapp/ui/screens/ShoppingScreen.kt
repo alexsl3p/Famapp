@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LocalDining
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,8 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.kinly.famapp.data.models.Product
 import com.kinly.famapp.data.models.ShoppingItem
+import com.kinly.famapp.features.products.BarcodeLookup
 import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
 import com.kinly.famapp.ui.components.GlassCard
@@ -38,7 +41,9 @@ import com.kinly.famapp.ui.theme.*
 fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val productUiState by productViewModel.uiState.collectAsState()
+    val scanResult by productViewModel.scanResult.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showScanner by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -146,6 +151,21 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
             }
         }
 
+        // Scan barcode FAB (above the add FAB)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp, bottom = 158.dp)
+                .size(56.dp)
+                .background(Color(0x33272F43), CircleShape)
+                .border(1.dp, Color(0x33FFFFFF), CircleShape)
+                .clip(CircleShape)
+                .clickable { showScanner = true },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(imageVector = Icons.Outlined.QrCodeScanner, contentDescription = "Scan barcode", tint = Primary, modifier = Modifier.size(26.dp))
+        }
+
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -158,6 +178,40 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
         ) {
             Icon(imageVector = Icons.Filled.Add, contentDescription = "Add Item", tint = Color.White, modifier = Modifier.size(28.dp))
         }
+
+        if (showScanner) {
+            ScannerScreen(
+                onClose = { showScanner = false },
+                onBarcodeDetected = { barcode ->
+                    showScanner = false
+                    productViewModel.onBarcodeScanned(barcode)
+                }
+            )
+        }
+    }
+
+    scanResult?.let { result ->
+        ScanResultDialog(
+            result = result,
+            onDismiss = { productViewModel.clearScanResult() },
+            onAddExisting = { product ->
+                viewModel.addItem(product.name, null, productId = product.id)
+                productViewModel.clearScanResult()
+            },
+            onCreateAndAdd = { name, barcode, brand, packageSize, imageUrl, source ->
+                productViewModel.createScannedProduct(
+                    name = name,
+                    barcode = barcode,
+                    brand = brand,
+                    packageSize = packageSize,
+                    imageUrl = imageUrl,
+                    source = source
+                ) { product ->
+                    viewModel.addItem(product.name, null, productId = product.id)
+                }
+                productViewModel.clearScanResult()
+            }
+        )
     }
 
     if (showAddDialog) {
@@ -380,6 +434,150 @@ fun AddShoppingItemDialog(
             TextButton(onClick = onDismiss) {
                 Text("Отмена", color = OnSurfaceVariant)
             }
+        }
+    )
+}
+
+@Composable
+fun ScanResultDialog(
+    result: BarcodeLookup,
+    onDismiss: () -> Unit,
+    onAddExisting: (Product) -> Unit,
+    onCreateAndAdd: (
+        name: String,
+        barcode: String,
+        brand: String?,
+        packageSize: String?,
+        imageUrl: String?,
+        source: String
+    ) -> Unit
+) {
+    // Loading показываем без кнопок — это просто индикатор
+    if (result is BarcodeLookup.Loading) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            containerColor = Color(0xFF1D2538),
+            title = { Text("Ищем товар…", color = OnSurface) },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(color = Primary, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Проверяем каталог и Open Food Facts", color = OnSurfaceVariant, fontSize = 13.sp)
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Отмена", color = OnSurfaceVariant) }
+            }
+        )
+        return
+    }
+
+    // Для остальных кейсов — редактируемое имя + действие
+    val initialName = when (result) {
+        is BarcodeLookup.ExistingProduct -> result.product.name
+        is BarcodeLookup.Suggestion -> result.name
+        else -> ""
+    }
+    var name by remember(result) { mutableStateOf(initialName) }
+
+    val title = when (result) {
+        is BarcodeLookup.ExistingProduct -> "Товар найден в каталоге"
+        is BarcodeLookup.Suggestion -> "Найдено в Open Food Facts"
+        is BarcodeLookup.NotFound -> "Товар не найден"
+        else -> ""
+    }
+
+    val imageUrl = (result as? BarcodeLookup.Suggestion)?.imageUrl
+    val brand = (result as? BarcodeLookup.Suggestion)?.brand
+    val packageSize = (result as? BarcodeLookup.Suggestion)?.packageSize
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1D2538),
+        title = { Text(title, color = OnSurface) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (imageUrl != null) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+                if (result is BarcodeLookup.NotFound) {
+                    Text(
+                        "Введите название, чтобы добавить товар в каталог.",
+                        color = OnSurfaceVariant,
+                        fontSize = 13.sp
+                    )
+                }
+                if (result is BarcodeLookup.ExistingProduct) {
+                    Text(
+                        if (brand != null) "${result.product.name} ($brand)" else result.product.name,
+                        color = OnSurface,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Название", color = Outline) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Primary,
+                            unfocusedBorderColor = Outline,
+                            focusedTextColor = OnSurface,
+                            unfocusedTextColor = OnSurface,
+                            cursorColor = Primary
+                        ),
+                        singleLine = true
+                    )
+                }
+                if (brand != null || packageSize != null) {
+                    Text(
+                        listOfNotNull(brand, packageSize).joinToString(" · "),
+                        color = OnSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            when (result) {
+                is BarcodeLookup.ExistingProduct -> {
+                    TextButton(onClick = { onAddExisting(result.product) }) {
+                        Text("Добавить в список", color = Primary, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                is BarcodeLookup.Suggestion -> {
+                    TextButton(
+                        enabled = name.isNotBlank(),
+                        onClick = {
+                            onCreateAndAdd(name.trim(), result.barcode, result.brand, result.packageSize, result.imageUrl, "openfoodfacts")
+                        }
+                    ) {
+                        Text("В каталог и список", color = Primary, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                is BarcodeLookup.NotFound -> {
+                    TextButton(
+                        enabled = name.isNotBlank(),
+                        onClick = {
+                            onCreateAndAdd(name.trim(), result.barcode, null, null, null, "scan_manual")
+                        }
+                    ) {
+                        Text("Создать и добавить", color = Primary, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                else -> {}
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена", color = OnSurfaceVariant) }
         }
     )
 }

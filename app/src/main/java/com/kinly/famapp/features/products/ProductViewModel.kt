@@ -22,14 +22,39 @@ data class ProductUiState(
     val error: String? = null
 )
 
+/** Результат поиска по отсканированному штрихкоду. */
+sealed interface BarcodeLookup {
+    /** В процессе запроса (локальный каталог + Open Food Facts). */
+    data object Loading : BarcodeLookup
+
+    /** Товар уже есть в семейном каталоге. */
+    data class ExistingProduct(val product: Product) : BarcodeLookup
+
+    /** Товар найден в Open Food Facts — предлагаем добавить в каталог. */
+    data class Suggestion(
+        val barcode: String,
+        val name: String,
+        val brand: String?,
+        val packageSize: String?,
+        val imageUrl: String?
+    ) : BarcodeLookup
+
+    /** Ничего не нашли — предлагаем создать вручную с этим штрихкодом. */
+    data class NotFound(val barcode: String) : BarcodeLookup
+}
+
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class ProductViewModel @Inject constructor(
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val openFoodFacts: OpenFoodFactsService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProductUiState())
     val uiState: StateFlow<ProductUiState> = _uiState.asStateFlow()
+
+    private val _scanResult = MutableStateFlow<BarcodeLookup?>(null)
+    val scanResult: StateFlow<BarcodeLookup?> = _scanResult.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
 
@@ -86,6 +111,70 @@ class ProductViewModel @Inject constructor(
                 )
                 val updated = _uiState.value.products + product
                 _uiState.value = _uiState.value.copy(products = updated)
+                onSuccess(product)
+            }.onFailure { e ->
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    /**
+     * Обрабатывает отсканированный штрихкод: сначала ищет в семейном каталоге,
+     * затем в Open Food Facts. Результат публикуется в [scanResult].
+     */
+    fun onBarcodeScanned(barcode: String) {
+        val familyId = currentFamilyId ?: return
+        _scanResult.value = BarcodeLookup.Loading
+        viewModelScope.launch {
+            val existing = productRepository.findByBarcode(familyId, barcode)
+            if (existing != null) {
+                _scanResult.value = BarcodeLookup.ExistingProduct(existing)
+                return@launch
+            }
+            val info = openFoodFacts.lookup(barcode)
+            _scanResult.value = if (info != null) {
+                BarcodeLookup.Suggestion(
+                    barcode = barcode,
+                    name = info.name,
+                    brand = info.brand,
+                    packageSize = info.packageSize,
+                    imageUrl = info.imageUrl
+                )
+            } else {
+                BarcodeLookup.NotFound(barcode)
+            }
+        }
+    }
+
+    fun clearScanResult() {
+        _scanResult.value = null
+    }
+
+    /** Создаёт продукт из данных скана (Open Food Facts или ручной ввод). */
+    fun createScannedProduct(
+        name: String,
+        barcode: String,
+        brand: String? = null,
+        packageSize: String? = null,
+        imageUrl: String? = null,
+        productType: String = "other",
+        source: String = "openfoodfacts",
+        onSuccess: (Product) -> Unit = {}
+    ) {
+        val familyId = currentFamilyId ?: return
+        viewModelScope.launch {
+            runCatching {
+                val product = productRepository.createProduct(
+                    familyId = familyId,
+                    name = name,
+                    brand = brand,
+                    barcode = barcode,
+                    packageSize = packageSize,
+                    productType = productType,
+                    imageUrl = imageUrl,
+                    source = source
+                )
+                _uiState.value = _uiState.value.copy(products = _uiState.value.products + product)
                 onSuccess(product)
             }.onFailure { e ->
                 _uiState.value = _uiState.value.copy(error = e.message)
