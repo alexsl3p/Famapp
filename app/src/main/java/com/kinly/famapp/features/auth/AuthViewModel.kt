@@ -74,6 +74,16 @@ class AuthViewModel @Inject constructor(
         _signInError.value = null
     }
 
+    fun signInAsGuest() {
+        _authState.value = AuthState.Authenticated(
+            Profile(
+                id = "guest-test-user",
+                fullName = "Тест",
+                activeFamilyId = "00000000-0000-0000-0000-000000000001"
+            )
+        )
+    }
+
     private suspend fun resolveProfile() {
         _isSigningIn.value = false
         val profile = authRepository.getProfile()

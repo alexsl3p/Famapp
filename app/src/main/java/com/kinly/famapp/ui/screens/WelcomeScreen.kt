@@ -22,6 +22,7 @@ import com.kinly.famapp.ui.theme.Secondary
 @Composable
 fun WelcomeScreen(
     onSignInWithGoogle: () -> Unit,
+    onContinueAsGuest: () -> Unit = {},
     isLoading: Boolean = false,
     errorMessage: String? = null
 ) {
@@ -87,6 +88,14 @@ fun WelcomeScreen(
                         fontSize = 16.sp
                     )
                 }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = onContinueAsGuest) {
+                Text(
+                    text = "Продолжить без входа (тест)",
+                    color = OnSurfaceVariant,
+                    fontSize = 14.sp
+                )
             }
         }
     }

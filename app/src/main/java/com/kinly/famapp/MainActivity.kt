@@ -80,7 +80,8 @@ fun KinlyApp() {
                                 authViewModel.signInWithGoogle(idToken, rawNonce)
                             }
                         }
-                    }
+                    },
+                    onContinueAsGuest = { authViewModel.signInAsGuest() }
                 )
             }
             is AuthState.NeedsFamily -> {
