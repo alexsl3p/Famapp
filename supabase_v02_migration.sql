@@ -72,7 +72,7 @@ create policy "members create inventory events"
 
 -- 5. set_updated_at trigger on products
 create trigger set_updated_at before update on public.products
-  for each row execute procedure public.set_updated_at();
+  for each row execute procedure public.handle_updated_at();
 
 -- 6. Extend mark_shopping_item_checked RPC to write inventory_event on purchase
 create or replace function public.mark_shopping_item_checked(

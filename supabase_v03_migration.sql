@@ -34,7 +34,7 @@ create index if not exists idx_inventory_items_product_id on public.inventory_it
 
 -- 3. set_updated_at trigger
 create trigger set_updated_at before update on public.inventory_items
-  for each row execute procedure public.set_updated_at();
+  for each row execute procedure public.handle_updated_at();
 
 -- 4. RLS
 alter table public.inventory_locations enable row level security;
