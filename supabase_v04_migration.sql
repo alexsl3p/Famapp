@@ -52,20 +52,26 @@ create or replace view public.v_inventory_status
 create or replace view public.v_purchase_cadence
   with (security_invoker = true) as
   select
-    ie.product_id,
-    ie.family_id,
-    p.name as product_name,
+    product_id,
+    family_id,
+    product_name,
     count(*) as total_purchases,
-    avg(
+    avg(days_to_next) as avg_days_between_purchases,
+    max(event_at) as last_purchased_at
+  from (
+    select
+      ie.product_id,
+      ie.family_id,
+      p.name as product_name,
+      ie.event_at,
       extract(epoch from (
         lead(ie.event_at) over (
           partition by ie.product_id, ie.family_id
           order by ie.event_at
         ) - ie.event_at
-      )) / 86400
-    ) as avg_days_between_purchases,
-    max(ie.event_at) as last_purchased_at
-  from public.inventory_events ie
-  join public.products p on p.id = ie.product_id
-  where ie.event_type = 'purchase'
-  group by ie.product_id, ie.family_id, p.name;
+      )) / 86400 as days_to_next
+    from public.inventory_events ie
+    join public.products p on p.id = ie.product_id
+    where ie.event_type = 'purchase'
+  ) cadence
+  group by product_id, family_id, product_name;
