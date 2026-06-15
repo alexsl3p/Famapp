@@ -197,6 +197,13 @@ fun MainAppContent(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onOpenTasks = {
+                        navController.navigate(Screen.Tasks.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }

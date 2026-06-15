@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.ShoppingBasket
 import androidx.compose.material.icons.outlined.WbCloudy
@@ -39,7 +40,8 @@ fun HomeScreen(
     shoppingViewModel: ShoppingViewModel,
     familyViewModel: FamilyViewModel,
     currentUserId: String,
-    onOpenShopping: () -> Unit = {}
+    onOpenShopping: () -> Unit = {},
+    onOpenTasks: () -> Unit = {}
 ) {
     val tasksState by tasksViewModel.uiState.collectAsState()
     val shoppingState by shoppingViewModel.uiState.collectAsState()
@@ -48,6 +50,8 @@ fun HomeScreen(
     // Показываем только задачи с проставленной звёздочкой (приоритет).
     // Если ни одна задача не отмечена — приоритетных нет, фолбэка на обычные задачи нет.
     val priorityTask: Task? = tasksState.tasks.firstOrNull { it.isPriority && !it.isCompleted }
+    val activeTasks = tasksState.tasks.filter { !it.isCompleted }
+    val previewTasks = activeTasks.filter { it.id != priorityTask?.id }.take(4)
     val previewItems = shoppingState.items.filter { !it.isChecked }.take(3)
     val members = familyState.members
     val tasksLeft = tasksState.tasks.count { !it.isCompleted }
@@ -78,6 +82,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onOpenTasks() }
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 Box(
@@ -173,6 +179,73 @@ fun HomeScreen(
             }
         }
 
+        // Tasks Card
+        GlassCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onOpenTasks() }
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Outlined.Checklist, contentDescription = null, tint = Primary, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Задачи",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
+                            color = OnSurface
+                        )
+                    }
+                    Icon(imageVector = Icons.Filled.Add, contentDescription = "Add", tint = Primary, modifier = Modifier.size(24.dp))
+                }
+
+                if (previewTasks.isEmpty()) {
+                    Text(
+                        if (activeTasks.isEmpty()) "Нет активных задач" else "Все задачи в приоритете",
+                        color = OnSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    previewTasks.forEach { task ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(18.dp).border(1.dp, Outline, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (task.isPriority) {
+                                    Icon(Icons.Filled.Star, null, tint = Secondary, modifier = Modifier.size(12.dp))
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(text = task.title, style = MaterialTheme.typography.bodyMedium, color = OnSurface, modifier = Modifier.weight(1f))
+                            if (task.dueDate != null) {
+                                Text(text = task.dueDate, color = Outline, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                GlassButton(modifier = Modifier.fillMaxWidth().clickable { onOpenTasks() }) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "Все задачи", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+
         // Stats Card
         GlassCard(
             modifier = Modifier
@@ -244,6 +317,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onOpenShopping() }
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(
