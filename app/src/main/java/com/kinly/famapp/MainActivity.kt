@@ -25,7 +25,10 @@ import com.kinly.famapp.features.auth.AuthState
 import com.kinly.famapp.features.auth.AuthViewModel
 import com.kinly.famapp.features.auth.GoogleSignInHelper
 import com.kinly.famapp.features.family.FamilyViewModel
+import com.kinly.famapp.features.inventory.InventoryViewModel
+import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
+import com.kinly.famapp.features.stats.StatsViewModel
 import com.kinly.famapp.features.tasks.TasksViewModel
 import com.kinly.famapp.navigation.Screen
 import com.kinly.famapp.navigation.bottomNavItems
@@ -139,6 +142,9 @@ fun MainAppContent(
     val tasksViewModel: TasksViewModel = hiltViewModel()
     val shoppingViewModel: ShoppingViewModel = hiltViewModel()
     val familyViewModel: FamilyViewModel = hiltViewModel()
+    val productViewModel: ProductViewModel = hiltViewModel()
+    val inventoryViewModel: InventoryViewModel = hiltViewModel()
+    val statsViewModel: StatsViewModel = hiltViewModel()
 
     val familyUiState by familyViewModel.uiState.collectAsState()
 
@@ -146,6 +152,9 @@ fun MainAppContent(
         tasksViewModel.load(familyId, profile.id)
         shoppingViewModel.load(familyId)
         familyViewModel.load(familyId)
+        productViewModel.load(familyId)
+        inventoryViewModel.load(familyId)
+        statsViewModel.load(familyId)
     }
 
     Scaffold(
@@ -183,10 +192,17 @@ fun MainAppContent(
                 )
             }
             composable(Screen.Shopping.route) {
-                ShoppingScreen(viewModel = shoppingViewModel)
+                ShoppingContainerScreen(
+                    shoppingViewModel = shoppingViewModel,
+                    productViewModel = productViewModel,
+                    inventoryViewModel = inventoryViewModel
+                )
             }
             composable(Screen.Family.route) {
                 FamilyScreen(viewModel = familyViewModel, currentUserId = profile.id)
+            }
+            composable(Screen.Stats.route) {
+                StatsScreen(viewModel = statsViewModel)
             }
         }
     }

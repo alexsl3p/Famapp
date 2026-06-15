@@ -1,9 +1,11 @@
 package com.kinly.famapp.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.ShoppingBasket
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.People
@@ -15,6 +17,7 @@ sealed class Screen(val route: String) {
     object Tasks : Screen("tasks")
     object Shopping : Screen("shopping")
     object Family : Screen("family")
+    object Stats : Screen("stats")
 }
 
 data class BottomNavItem(
@@ -48,5 +51,11 @@ val bottomNavItems = listOf(
         route = Screen.Family.route,
         selectedIcon = Icons.Filled.People,
         unselectedIcon = Icons.Outlined.People
+    ),
+    BottomNavItem(
+        label = "Stats",
+        route = Screen.Stats.route,
+        selectedIcon = Icons.Filled.BarChart,
+        unselectedIcon = Icons.Outlined.BarChart
     )
 )

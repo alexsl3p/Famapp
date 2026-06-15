@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LocalDining
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,14 +27,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kinly.famapp.data.models.Product
 import com.kinly.famapp.data.models.ShoppingItem
+import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
 import com.kinly.famapp.ui.components.GlassCard
 import com.kinly.famapp.ui.theme.*
 
 @Composable
-fun ShoppingScreen(viewModel: ShoppingViewModel) {
+fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val productUiState by productViewModel.uiState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -42,7 +48,6 @@ fun ShoppingScreen(viewModel: ShoppingViewModel) {
                 .padding(horizontal = 16.dp)
                 .padding(top = 20.dp, bottom = 120.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -68,7 +73,6 @@ fun ShoppingScreen(viewModel: ShoppingViewModel) {
                     CircularProgressIndicator(color = Primary)
                 }
             } else {
-                // Category header row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -100,7 +104,6 @@ fun ShoppingScreen(viewModel: ShoppingViewModel) {
                     }
                 }
 
-                // Items container
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         if (uiState.items.isEmpty()) {
@@ -121,7 +124,6 @@ fun ShoppingScreen(viewModel: ShoppingViewModel) {
                     }
                 }
 
-                // Clear checked button
                 if (uiState.items.any { it.isChecked }) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Box(
@@ -144,7 +146,6 @@ fun ShoppingScreen(viewModel: ShoppingViewModel) {
             }
         }
 
-        // FAB
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -161,9 +162,15 @@ fun ShoppingScreen(viewModel: ShoppingViewModel) {
 
     if (showAddDialog) {
         AddShoppingItemDialog(
-            onDismiss = { showAddDialog = false },
-            onConfirm = { title, quantity ->
-                viewModel.addItem(title, quantity.ifBlank { null })
+            searchResults = productUiState.searchResults,
+            onSearchQueryChange = { productViewModel.setSearchQuery(it) },
+            onDismiss = {
+                showAddDialog = false
+                productViewModel.setSearchQuery("")
+            },
+            onConfirm = { title, quantity, productId ->
+                viewModel.addItem(title, quantity.ifBlank { null }, productId = productId)
+                productViewModel.setSearchQuery("")
                 showAddDialog = false
             }
         )
@@ -194,13 +201,30 @@ fun ShoppingItemRow(item: ShoppingItem, onToggle: () -> Unit) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        Text(
-            text = item.title,
-            color = if (item.isChecked) Outline else OnSurface,
-            fontSize = 17.sp,
-            textDecoration = if (item.isChecked) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                color = if (item.isChecked) Outline else OnSurface,
+                fontSize = 17.sp,
+                textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
+            )
+            if (item.productId != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Inventory2,
+                        contentDescription = null,
+                        tint = Primary.copy(alpha = 0.6f),
+                        modifier = Modifier.size(10.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "из каталога",
+                        color = Primary.copy(alpha = 0.6f),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
 
         if (item.quantity != null) {
             Text(
@@ -215,9 +239,16 @@ fun ShoppingItemRow(item: ShoppingItem, onToggle: () -> Unit) {
 }
 
 @Composable
-fun AddShoppingItemDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
+fun AddShoppingItemDialog(
+    searchResults: List<Product>,
+    onSearchQueryChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: (title: String, quantity: String, productId: String?) -> Unit
+) {
     var title by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
+    var selectedProduct by remember { mutableStateOf<Product?>(null) }
+    var showSuggestions by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -225,20 +256,77 @@ fun AddShoppingItemDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> 
         title = { Text("Добавить товар", color = OnSurface) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Название", color = Outline) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Primary,
-                        unfocusedBorderColor = Outline,
-                        focusedTextColor = OnSurface,
-                        unfocusedTextColor = OnSurface,
-                        cursorColor = Primary
-                    ),
-                    singleLine = true
-                )
+                Column {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { value ->
+                            title = value
+                            selectedProduct = null
+                            onSearchQueryChange(value)
+                            showSuggestions = value.length >= 2
+                        },
+                        label = { Text("Название", color = Outline) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = if (selectedProduct != null) Primary else Primary,
+                            unfocusedBorderColor = if (selectedProduct != null) Primary.copy(alpha = 0.5f) else Outline,
+                            focusedTextColor = OnSurface,
+                            unfocusedTextColor = OnSurface,
+                            cursorColor = Primary
+                        ),
+                        singleLine = true,
+                        trailingIcon = if (selectedProduct != null) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Outlined.Inventory2,
+                                    contentDescription = "Linked to product",
+                                    tint = Primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        } else null
+                    )
+
+                    if (showSuggestions && searchResults.isNotEmpty() && selectedProduct == null) {
+                        GlassCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 160.dp)
+                        ) {
+                            LazyColumn {
+                                items(searchResults.take(4)) { product ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedProduct = product
+                                                title = product.name
+                                                showSuggestions = false
+                                                onSearchQueryChange("")
+                                            }
+                                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Inventory2,
+                                            contentDescription = null,
+                                            tint = Primary.copy(alpha = 0.7f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(product.name, color = OnSurface, fontSize = 14.sp)
+                                            if (product.brand != null) {
+                                                Text(product.brand, color = OnSurfaceVariant, fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = quantity,
                     onValueChange = { quantity = it },
@@ -253,10 +341,38 @@ fun AddShoppingItemDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> 
                     ),
                     singleLine = true
                 )
+
+                if (selectedProduct != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Primary.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Outlined.Inventory2, contentDescription = null, tint = Primary, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Привязан к каталогу",
+                            color = Primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "Убрать",
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp,
+                            modifier = Modifier.clickable { selectedProduct = null }
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { if (title.isNotBlank()) onConfirm(title.trim(), quantity.trim()) }) {
+            TextButton(onClick = {
+                if (title.isNotBlank()) onConfirm(title.trim(), quantity.trim(), selectedProduct?.id)
+            }) {
                 Text("Добавить", color = Primary, fontWeight = FontWeight.SemiBold)
             }
         },

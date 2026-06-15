@@ -110,12 +110,12 @@ class ShoppingViewModel @Inject constructor(
         }
     }
 
-    fun addItem(title: String, quantity: String? = null, unit: String? = null) {
+    fun addItem(title: String, quantity: String? = null, unit: String? = null, productId: String? = null) {
         val familyId = currentFamilyId ?: return
         val listId = _uiState.value.currentList?.id ?: return
         viewModelScope.launch {
             try {
-                shoppingRepository.addItem(familyId, listId, title, quantity, unit)
+                shoppingRepository.addItem(familyId, listId, title, quantity, unit, productId)
                 refreshItems()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)

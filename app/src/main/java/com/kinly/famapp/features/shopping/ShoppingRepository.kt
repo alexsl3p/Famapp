@@ -35,7 +35,8 @@ class ShoppingRepository @Inject constructor(private val supabase: SupabaseClien
         listId: String,
         title: String,
         quantity: String? = null,
-        unit: String? = null
+        unit: String? = null,
+        productId: String? = null
     ) {
         val userId = supabase.auth.currentUserOrNull()?.id ?: return
         supabase.postgrest["shopping_items"].insert(
@@ -46,6 +47,7 @@ class ShoppingRepository @Inject constructor(private val supabase: SupabaseClien
                 if (quantity != null) put("quantity", quantity)
                 if (unit != null) put("unit", unit)
                 put("created_by", userId)
+                if (productId != null) put("product_id", productId)
             }
         )
     }

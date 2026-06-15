@@ -16,5 +16,6 @@ data class ShoppingItem(
     @SerialName("is_checked") val isChecked: Boolean = false,
     @SerialName("checked_by") val checkedBy: String? = null,
     @SerialName("checked_at") val checkedAt: String? = null,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("product_id") val productId: String? = null
 )
