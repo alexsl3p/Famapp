@@ -2,6 +2,7 @@ package com.kinly.famapp.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -43,7 +44,8 @@ fun HomeScreen(
     val shoppingState by shoppingViewModel.uiState.collectAsState()
     val familyState by familyViewModel.uiState.collectAsState()
 
-    val priorityTask: Task? = tasksState.tasks.firstOrNull { !it.isCompleted }
+    val priorityTask: Task? = tasksState.tasks.firstOrNull { it.isPriority && !it.isCompleted }
+        ?: tasksState.tasks.firstOrNull { !it.isCompleted }
     val previewItems = shoppingState.items.filter { !it.isChecked }.take(3)
     val members = familyState.members
     val tasksLeft = tasksState.tasks.count { !it.isCompleted }
@@ -142,10 +144,12 @@ fun HomeScreen(
                     if (priorityTask != null) {
                         Box(
                             modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
                                 .background(
                                     Brush.horizontalGradient(listOf(Primary, Secondary)),
                                     RoundedCornerShape(20.dp)
                                 )
+                                .clickable { tasksViewModel.completeTask(priorityTask.id) }
                                 .padding(horizontal = 20.dp, vertical = 10.dp)
                         ) {
                             Text(

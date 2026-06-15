@@ -130,4 +130,29 @@ class ShoppingViewModel @Inject constructor(
             refreshItems()
         }
     }
+
+    fun selectList(listId: String) {
+        if (_uiState.value.currentList?.id == listId) return
+        val list = _uiState.value.lists.firstOrNull { it.id == listId } ?: return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(currentList = list, isLoading = true)
+            val items = shoppingRepository.getItems(listId)
+            saveToCache(items)
+            _uiState.value = _uiState.value.copy(items = items, isLoading = false, isOffline = false)
+        }
+    }
+
+    fun createList(title: String) {
+        val familyId = currentFamilyId ?: return
+        viewModelScope.launch {
+            try {
+                val list = shoppingRepository.createList(familyId, title)
+                val lists = _uiState.value.lists + list
+                val items = shoppingRepository.getItems(list.id)
+                _uiState.value = _uiState.value.copy(lists = lists, currentList = list, items = items)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
 }

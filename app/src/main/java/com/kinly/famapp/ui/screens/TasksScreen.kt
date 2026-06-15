@@ -1,19 +1,29 @@
 package com.kinly.famapp.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.AddAPhoto
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,16 +31,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.kinly.famapp.data.models.FamilyMember
 import com.kinly.famapp.data.models.Task
+import com.kinly.famapp.data.models.TaskComment
 import com.kinly.famapp.features.tasks.TaskFilter
 import com.kinly.famapp.features.tasks.TasksViewModel
 import com.kinly.famapp.ui.components.GlassCard
 import com.kinly.famapp.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -134,7 +151,9 @@ fun TasksScreen(
                         membersMap = membersMap,
                         currentUserId = currentUserId,
                         onComplete = { viewModel.completeTask(task.id) },
-                        onUncomplete = { viewModel.uncompleteTask(task.id) }
+                        onUncomplete = { viewModel.uncompleteTask(task.id) },
+                        onTogglePriority = { viewModel.togglePriority(task.id, !task.isPriority) },
+                        onOpenComments = { viewModel.openComments(task.id) }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -147,11 +166,159 @@ fun TasksScreen(
             members = members,
             currentUserId = currentUserId,
             onDismiss = { showAddDialog = false },
-            onConfirm = { title, dueDate, assignedTo, repeatType ->
-                viewModel.createTask(title, assignedTo, dueDate, repeatType)
+            onConfirm = { title, dueDate, assignedTo, repeatType, description, isPriority, photoBytes ->
+                viewModel.createTask(
+                    title = title,
+                    assignedTo = assignedTo,
+                    dueDate = dueDate,
+                    repeatType = repeatType,
+                    description = description,
+                    isPriority = isPriority,
+                    photoBytes = photoBytes
+                )
                 showAddDialog = false
             }
         )
+    }
+
+    val commentsState by viewModel.commentsState.collectAsState()
+    if (commentsState.taskId != null) {
+        CommentsSheet(
+            comments = commentsState.comments,
+            isLoading = commentsState.isLoading,
+            isSending = commentsState.isSending,
+            membersMap = membersMap,
+            onSend = { body, photo -> viewModel.addComment(body, photo) },
+            onDismiss = { viewModel.closeComments() }
+        )
+    }
+}
+
+/** Кнопка выбора изображения через системный Photo Picker; отдаёт байты. */
+@Composable
+fun rememberPhotoPicker(onPicked: (ByteArray) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val bytes = withContext(Dispatchers.IO) {
+                    runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                }
+                if (bytes != null) onPicked(bytes)
+            }
+        }
+    }
+    return {
+        launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CommentsSheet(
+    comments: List<TaskComment>,
+    isLoading: Boolean,
+    isSending: Boolean,
+    membersMap: Map<String, String>,
+    onSend: (body: String?, photo: ByteArray?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var input by remember { mutableStateOf("") }
+    var pendingPhoto by remember { mutableStateOf<ByteArray?>(null) }
+    val pickPhoto = rememberPhotoPicker { pendingPhoto = it }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color(0xFF1D2538)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+                .heightIn(min = 200.dp, max = 520.dp)
+        ) {
+            Text("Комментарии", color = OnSurface, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+            Spacer(Modifier.height(12.dp))
+
+            when {
+                isLoading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Primary)
+                }
+                comments.isEmpty() -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text("Пока нет комментариев", color = OnSurfaceVariant)
+                }
+                else -> LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+                    items(comments) { comment ->
+                        CommentRow(comment, membersMap[comment.authorId])
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            pendingPhoto?.let {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                    Text("Фото прикреплено", color = Primary, fontSize = 12.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("✕", color = OnSurfaceVariant, modifier = Modifier.clickable { pendingPhoto = null })
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = pickPhoto) {
+                    Icon(Icons.Outlined.AddAPhoto, contentDescription = "Фото", tint = Primary)
+                }
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it },
+                    placeholder = { Text("Комментарий…", color = Outline) },
+                    modifier = Modifier.weight(1f),
+                    colors = taskFieldColors(),
+                    maxLines = 3
+                )
+                IconButton(
+                    enabled = !isSending && (input.isNotBlank() || pendingPhoto != null),
+                    onClick = {
+                        onSend(input.takeIf { it.isNotBlank() }, pendingPhoto)
+                        input = ""
+                        pendingPhoto = null
+                    }
+                ) {
+                    if (isSending) CircularProgressIndicator(color = Primary, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Outlined.Send, contentDescription = "Отправить", tint = Primary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentRow(comment: TaskComment, authorName: String?) {
+    Column {
+        if (authorName != null) {
+            Text(authorName, color = Primary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(2.dp))
+        }
+        if (!comment.body.isNullOrBlank()) {
+            Text(comment.body, color = OnSurface, fontSize = 14.sp)
+        }
+        if (comment.imageUrl != null) {
+            Spacer(Modifier.height(6.dp))
+            AsyncImage(
+                model = comment.imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        }
     }
 }
 
@@ -161,9 +328,15 @@ fun RealTaskCard(
     membersMap: Map<String, String> = emptyMap(),
     currentUserId: String = "",
     onComplete: () -> Unit,
-    onUncomplete: () -> Unit
+    onUncomplete: () -> Unit,
+    onTogglePriority: () -> Unit = {},
+    onOpenComments: () -> Unit = {}
 ) {
-    val accentColor = if (task.isCompleted) Outline else Primary
+    val accentColor = when {
+        task.isCompleted -> Outline
+        task.isPriority -> Secondary
+        else -> Primary
+    }
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -173,7 +346,12 @@ fun RealTaskCard(
                     .fillMaxHeight()
                     .background(accentColor, RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
             )
-            Column(modifier = Modifier.padding(16.dp).weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .clickable { onOpenComments() }
+                    .padding(16.dp)
+                    .weight(1f)
+            ) {
                 Row(verticalAlignment = Alignment.Top) {
                     Checkbox(
                         checked = task.isCompleted,
@@ -194,6 +372,14 @@ fun RealTaskCard(
                             fontSize = 18.sp,
                             textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
                         )
+                        if (!task.description.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = task.description,
+                                color = OnSurfaceVariant,
+                                fontSize = 13.sp
+                            )
+                        }
                         if (task.dueDate != null) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -217,6 +403,14 @@ fun RealTaskCard(
                                 fontSize = 11.sp
                             )
                         }
+                    }
+                    IconButton(onClick = onTogglePriority, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = if (task.isPriority) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            contentDescription = "Приоритет",
+                            tint = if (task.isPriority) Secondary else Outline,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
@@ -271,15 +465,27 @@ fun AddTaskDialog(
     members: List<FamilyMember> = emptyList(),
     currentUserId: String = "",
     onDismiss: () -> Unit,
-    onConfirm: (title: String, dueDate: String?, assignedTo: String?, repeatType: String) -> Unit
+    onConfirm: (
+        title: String,
+        dueDate: String?,
+        assignedTo: String?,
+        repeatType: String,
+        description: String?,
+        isPriority: Boolean,
+        photoBytes: ByteArray?
+    ) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
     var dueDate by remember { mutableStateOf<String?>(null) }
     var assignedToId by remember { mutableStateOf<String?>(null) }
     var repeatType by remember { mutableStateOf("none") }
+    var isPriority by remember { mutableStateOf(false) }
+    var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAssigneeDropdown by remember { mutableStateOf(false) }
     var showRepeatDropdown by remember { mutableStateOf(false) }
+    val pickPhoto = rememberPhotoPicker { photoBytes = it }
 
     val datePickerState = rememberDatePickerState()
     val repeatOptions = listOf(
@@ -322,6 +528,49 @@ fun AddTaskDialog(
                     colors = taskFieldColors(),
                     singleLine = true
                 )
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Комментарий (необязательно)", color = Outline) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = taskFieldColors(),
+                    maxLines = 3
+                )
+
+                // Приоритет
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { isPriority = !isPriority }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (isPriority) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                        contentDescription = null,
+                        tint = if (isPriority) Secondary else Outline,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Приоритетная задача", color = if (isPriority) Secondary else OnSurfaceVariant, fontSize = 14.sp)
+                }
+
+                // Фото
+                OutlinedButton(
+                    onClick = pickPhoto,
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, if (photoBytes != null) Primary else Outline),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = if (photoBytes != null) Primary else Outline)
+                ) {
+                    Icon(Icons.Outlined.AddAPhoto, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (photoBytes != null) "Фото прикреплено" else "Добавить фото (необязательно)", modifier = Modifier.weight(1f))
+                    if (photoBytes != null) {
+                        Text("✕", modifier = Modifier.clickable { photoBytes = null })
+                    }
+                }
 
                 OutlinedButton(
                     onClick = { showDatePicker = true },
@@ -399,7 +648,19 @@ fun AddTaskDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { if (title.isNotBlank()) onConfirm(title.trim(), dueDate, assignedToId, repeatType) }) {
+            TextButton(onClick = {
+                if (title.isNotBlank()) {
+                    onConfirm(
+                        title.trim(),
+                        dueDate,
+                        assignedToId,
+                        repeatType,
+                        description.trim().takeIf { it.isNotBlank() },
+                        isPriority,
+                        photoBytes
+                    )
+                }
+            }) {
                 Text("Создать", color = Primary, fontWeight = FontWeight.SemiBold)
             }
         },

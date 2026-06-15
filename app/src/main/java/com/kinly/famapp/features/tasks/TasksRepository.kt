@@ -1,6 +1,7 @@
 package com.kinly.famapp.features.tasks
 
 import com.kinly.famapp.data.models.Task
+import com.kinly.famapp.data.models.TaskComment
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
@@ -34,16 +35,18 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
             .decodeList<Task>()
     }.getOrElse { emptyList() }
 
+    /** Создаёт задачу и возвращает её id (для прикрепления фото-комментария). */
     suspend fun createTask(
         familyId: String,
         title: String,
         description: String? = null,
         assignedTo: String? = null,
         dueDate: String? = null,
-        repeatType: String = "none"
-    ) {
-        val userId = supabase.auth.currentUserOrNull()?.id ?: return
-        supabase.postgrest.rpc(
+        repeatType: String = "none",
+        isPriority: Boolean = false
+    ): String? {
+        val userId = supabase.auth.currentUserOrNull()?.id ?: return null
+        val result = supabase.postgrest.rpc(
             "create_task",
             buildJsonObject {
                 put("p_family_id", familyId)
@@ -53,6 +56,46 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
                 if (dueDate != null) put("p_due_date", dueDate)
                 put("p_repeat_type", repeatType)
                 put("p_created_by", userId)
+                put("p_is_priority", isPriority)
+            }
+        )
+        // RPC возвращает uuid в виде JSON-строки, напр. "\"<uuid>\""
+        return result.data.trim().trim('"').takeIf { it.isNotBlank() && it != "null" }
+    }
+
+    suspend fun setPriority(taskId: String, isPriority: Boolean) {
+        runCatching {
+            supabase.postgrest["tasks"].update(
+                buildJsonObject { put("is_priority", isPriority) }
+            ) {
+                filter { eq("id", taskId) }
+            }
+        }
+    }
+
+    suspend fun getComments(taskId: String): List<TaskComment> = runCatching {
+        supabase.postgrest["task_comments"]
+            .select {
+                filter { eq("task_id", taskId) }
+                order("created_at", Order.ASCENDING)
+            }
+            .decodeList<TaskComment>()
+    }.getOrElse { emptyList() }
+
+    suspend fun addComment(
+        taskId: String,
+        familyId: String,
+        body: String?,
+        imageUrl: String?
+    ) {
+        val userId = supabase.auth.currentUserOrNull()?.id ?: return
+        supabase.postgrest["task_comments"].insert(
+            buildJsonObject {
+                put("task_id", taskId)
+                put("family_id", familyId)
+                put("author_id", userId)
+                if (body != null) put("body", body)
+                if (imageUrl != null) put("image_url", imageUrl)
             }
         )
     }

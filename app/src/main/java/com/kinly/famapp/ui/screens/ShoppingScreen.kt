@@ -14,8 +14,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LocalDining
+import androidx.compose.material.icons.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.kinly.famapp.data.models.Product
 import com.kinly.famapp.data.models.ShoppingItem
+import com.kinly.famapp.data.models.ShoppingList
 import com.kinly.famapp.features.products.BarcodeLookup
 import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
@@ -44,6 +47,8 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
     val scanResult by productViewModel.scanResult.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showScanner by remember { mutableStateOf(false) }
+    var showListMenu by remember { mutableStateOf(false) }
+    var showCreateList by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -53,6 +58,16 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                 .padding(horizontal = 16.dp)
                 .padding(top = 20.dp, bottom = 120.dp)
         ) {
+            ShoppingListSelector(
+                lists = uiState.lists,
+                currentList = uiState.currentList,
+                expanded = showListMenu,
+                onExpandedChange = { showListMenu = it },
+                onSelect = { viewModel.selectList(it); showListMenu = false },
+                onCreateNew = { showListMenu = false; showCreateList = true }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -210,6 +225,16 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                     viewModel.addItem(product.name, null, productId = product.id)
                 }
                 productViewModel.clearScanResult()
+            }
+        )
+    }
+
+    if (showCreateList) {
+        CreateListDialog(
+            onDismiss = { showCreateList = false },
+            onConfirm = { name ->
+                viewModel.createList(name)
+                showCreateList = false
             }
         )
     }
@@ -434,6 +459,84 @@ fun AddShoppingItemDialog(
             TextButton(onClick = onDismiss) {
                 Text("Отмена", color = OnSurfaceVariant)
             }
+        }
+    )
+}
+
+@Composable
+fun ShoppingListSelector(
+    lists: List<ShoppingList>,
+    currentList: ShoppingList?,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onSelect: (String) -> Unit,
+    onCreateNew: () -> Unit
+) {
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0x1AFFFFFF))
+                .clickable { onExpandedChange(true) }
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = currentList?.title ?: "Списки",
+                color = OnSurface,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(Icons.Outlined.ExpandMore, contentDescription = "Выбрать список", tint = Primary, modifier = Modifier.size(20.dp))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
+            lists.forEach { list ->
+                DropdownMenuItem(
+                    text = { Text(list.title, color = if (list.id == currentList?.id) Primary else OnSurface) },
+                    onClick = { onSelect(list.id) }
+                )
+            }
+            HorizontalDivider(color = Color(0x1AFFFFFF))
+            DropdownMenuItem(
+                text = { Text("Создать список", color = Primary) },
+                leadingIcon = { Icon(Icons.Outlined.PlaylistAdd, null, tint = Primary) },
+                onClick = onCreateNew
+            )
+        }
+    }
+}
+
+@Composable
+fun CreateListDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1D2538),
+        title = { Text("Новый список", color = OnSurface) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Название списка", color = Outline) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Primary,
+                    unfocusedBorderColor = Outline,
+                    focusedTextColor = OnSurface,
+                    unfocusedTextColor = OnSurface,
+                    cursorColor = Primary
+                ),
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) {
+                Text("Создать", color = Primary, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена", color = OnSurfaceVariant) }
         }
     )
 }

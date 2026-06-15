@@ -3,6 +3,7 @@ package com.kinly.famapp.features.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kinly.famapp.data.models.Profile
+import com.kinly.famapp.features.storage.StorageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,8 @@ sealed class AuthState {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val storageRepository: StorageRepository
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
@@ -31,6 +33,9 @@ class AuthViewModel @Inject constructor(
 
     private val _signInError = MutableStateFlow<String?>(null)
     val signInError: StateFlow<String?> = _signInError.asStateFlow()
+
+    private val _isSavingProfile = MutableStateFlow(false)
+    val isSavingProfile: StateFlow<Boolean> = _isSavingProfile.asStateFlow()
 
     init {
         observeSession()
@@ -68,6 +73,38 @@ class AuthViewModel @Inject constructor(
 
     fun refreshProfile() {
         viewModelScope.launch { resolveProfile() }
+    }
+
+    /** Текущий профиль, если уже авторизованы (для экрана профиля). */
+    fun currentProfile(): Profile? = when (val s = _authState.value) {
+        is AuthState.Authenticated -> s.profile
+        is AuthState.NeedsFamily -> s.profile
+        else -> null
+    }
+
+    fun updateName(name: String, onDone: () -> Unit = {}) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            _isSavingProfile.value = true
+            runCatching { authRepository.updateName(name.trim()) }
+            resolveProfile()
+            _isSavingProfile.value = false
+            onDone()
+        }
+    }
+
+    fun updateAvatar(bytes: ByteArray, onDone: () -> Unit = {}) {
+        val userId = authRepository.currentUserId() ?: return
+        viewModelScope.launch {
+            _isSavingProfile.value = true
+            runCatching {
+                val url = storageRepository.uploadAvatar(userId, bytes)
+                authRepository.updateAvatarUrl(url)
+            }
+            resolveProfile()
+            _isSavingProfile.value = false
+            onDone()
+        }
     }
 
     fun clearSignInError() {

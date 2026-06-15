@@ -14,6 +14,7 @@ data class Task(
     @SerialName("due_date") val dueDate: String? = null,
     @SerialName("due_time") val dueTime: String? = null,
     @SerialName("repeat_type") val repeatType: String = "none",
+    @SerialName("is_priority") val isPriority: Boolean = false,
     @SerialName("is_completed") val isCompleted: Boolean = false,
     @SerialName("completed_by") val completedBy: String? = null,
     @SerialName("completed_at") val completedAt: String? = null,

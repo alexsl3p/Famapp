@@ -3,6 +3,8 @@ package com.kinly.famapp.features.tasks
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kinly.famapp.data.models.Task
+import com.kinly.famapp.data.models.TaskComment
+import com.kinly.famapp.features.storage.StorageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.realtime.PostgresAction
@@ -27,14 +29,25 @@ data class TasksUiState(
     val error: String? = null
 )
 
+data class CommentsUiState(
+    val taskId: String? = null,
+    val comments: List<TaskComment> = emptyList(),
+    val isLoading: Boolean = false,
+    val isSending: Boolean = false
+)
+
 @HiltViewModel
 class TasksViewModel @Inject constructor(
     private val tasksRepository: TasksRepository,
+    private val storageRepository: StorageRepository,
     private val supabase: SupabaseClient
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TasksUiState())
     val uiState: StateFlow<TasksUiState> = _uiState.asStateFlow()
+
+    private val _commentsState = MutableStateFlow(CommentsUiState())
+    val commentsState: StateFlow<CommentsUiState> = _commentsState.asStateFlow()
 
     private var currentFamilyId: String? = null
     private var currentUserId: String? = null
@@ -97,14 +110,68 @@ class TasksViewModel @Inject constructor(
         title: String,
         assignedTo: String? = null,
         dueDate: String? = null,
-        repeatType: String = "none"
+        repeatType: String = "none",
+        description: String? = null,
+        isPriority: Boolean = false,
+        photoBytes: ByteArray? = null
     ) {
         val familyId = currentFamilyId ?: return
         viewModelScope.launch {
             try {
-                tasksRepository.createTask(familyId, title, assignedTo = assignedTo, dueDate = dueDate, repeatType = repeatType)
+                val taskId = tasksRepository.createTask(
+                    familyId, title,
+                    description = description,
+                    assignedTo = assignedTo,
+                    dueDate = dueDate,
+                    repeatType = repeatType,
+                    isPriority = isPriority
+                )
+                // Если при создании прикрепили фото — кладём его первым комментарием.
+                if (taskId != null && photoBytes != null) {
+                    runCatching {
+                        val url = storageRepository.uploadTaskPhoto(familyId, photoBytes)
+                        tasksRepository.addComment(taskId, familyId, body = null, imageUrl = url)
+                    }
+                }
                 refresh()
             } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun togglePriority(taskId: String, isPriority: Boolean) {
+        viewModelScope.launch {
+            tasksRepository.setPriority(taskId, isPriority)
+            refresh()
+        }
+    }
+
+    fun openComments(taskId: String) {
+        _commentsState.value = CommentsUiState(taskId = taskId, isLoading = true)
+        viewModelScope.launch {
+            val comments = tasksRepository.getComments(taskId)
+            _commentsState.value = _commentsState.value.copy(comments = comments, isLoading = false)
+        }
+    }
+
+    fun closeComments() {
+        _commentsState.value = CommentsUiState()
+    }
+
+    fun addComment(body: String?, photoBytes: ByteArray?) {
+        val familyId = currentFamilyId ?: return
+        val taskId = _commentsState.value.taskId ?: return
+        if (body.isNullOrBlank() && photoBytes == null) return
+        _commentsState.value = _commentsState.value.copy(isSending = true)
+        viewModelScope.launch {
+            try {
+                val imageUrl = photoBytes?.let { storageRepository.uploadTaskPhoto(familyId, it) }
+                tasksRepository.addComment(taskId, familyId, body?.takeIf { it.isNotBlank() }, imageUrl)
+                val comments = tasksRepository.getComments(taskId)
+                _commentsState.value = _commentsState.value.copy(comments = comments, isSending = false)
+            } catch (e: Exception) {
+                _commentsState.value = _commentsState.value.copy(isSending = false)
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }

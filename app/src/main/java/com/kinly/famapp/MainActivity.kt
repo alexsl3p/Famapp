@@ -163,7 +163,13 @@ fun MainAppContent(
 
     Scaffold(
         containerColor = Color.Transparent,
-        topBar = { KinlyTopBar(userInitial = profile.initial) },
+        topBar = {
+            KinlyTopBar(
+                userInitial = profile.initial,
+                avatarUrl = profile.avatarUrl,
+                onAvatarClick = { navController.navigate(Screen.Profile.route) }
+            )
+        },
         bottomBar = {
             BottomNavBar(currentRoute = currentRoute, onItemSelected = { route ->
                 navController.navigate(route) {
@@ -207,6 +213,13 @@ fun MainAppContent(
             }
             composable(Screen.Stats.route) {
                 StatsScreen(viewModel = statsViewModel)
+            }
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    profile = profile,
+                    authViewModel = authViewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

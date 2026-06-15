@@ -48,4 +48,22 @@ class AuthRepository @Inject constructor(private val supabase: SupabaseClient) {
             }
         }
     }
+
+    suspend fun updateName(name: String) {
+        val userId = currentUserId() ?: return
+        supabase.postgrest["profiles"].update(
+            { set("full_name", name) }
+        ) {
+            filter { eq("id", userId) }
+        }
+    }
+
+    suspend fun updateAvatarUrl(url: String) {
+        val userId = currentUserId() ?: return
+        supabase.postgrest["profiles"].update(
+            { set("avatar_url", url) }
+        ) {
+            filter { eq("id", userId) }
+        }
+    }
 }
