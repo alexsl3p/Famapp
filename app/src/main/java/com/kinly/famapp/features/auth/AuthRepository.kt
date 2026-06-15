@@ -21,7 +21,7 @@ class AuthRepository @Inject constructor(private val supabase: SupabaseClient) {
         supabase.auth.signInWith(IDToken) {
             provider = Google
             this.idToken = idToken
-            nonce = rawNonce
+            if (rawNonce.isNotEmpty()) nonce = rawNonce
         }
     }
 

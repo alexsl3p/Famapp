@@ -1,9 +1,12 @@
 package com.kinly.famapp
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -57,6 +60,20 @@ fun KinlyApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val idToken = if (result.resultCode == Activity.RESULT_OK) {
+            GoogleSignInHelper.extractIdToken(result.data)
+        } else null
+
+        when {
+            idToken != null -> scope.launch { authViewModel.signInWithGoogle(idToken, "") }
+            result.resultCode == Activity.RESULT_CANCELED -> Unit
+            else -> authViewModel.setSignInError("Google Sign-In: не удалось получить токен")
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         MeshBackground()
 
@@ -72,14 +89,9 @@ fun KinlyApp() {
                     errorMessage = signInError,
                     onSignInWithGoogle = {
                         authViewModel.clearSignInError()
-                        scope.launch {
-                            try {
-                                val helper = GoogleSignInHelper(context)
-                                val (idToken, rawNonce) = helper.signIn()
-                                authViewModel.signInWithGoogle(idToken, rawNonce)
-                            } catch (e: Exception) {
-                                authViewModel.setSignInError(e.message ?: "Ошибка входа через Google")
-                            }
+                        val client = GoogleSignInHelper.getClient(context)
+                        client.signOut().addOnCompleteListener {
+                            googleSignInLauncher.launch(client.signInIntent)
                         }
                     },
                     onContinueAsGuest = { authViewModel.signInAsGuest() }

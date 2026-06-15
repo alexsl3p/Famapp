@@ -89,7 +89,10 @@ dependencies {
     implementation(libs.supabase.realtime)
     implementation(libs.ktor.client.android)
 
-    // Google Sign-In via Credential Manager
+    // Google Sign-In (legacy API — works on all devices)
+    implementation(libs.play.services.auth)
+
+    // Credential Manager (kept for potential future use)
     implementation(libs.credentials)
     implementation(libs.credentials.play.services.auth)
     implementation(libs.googleid)
