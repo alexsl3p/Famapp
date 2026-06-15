@@ -7,10 +7,13 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.rpc
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private val rpcJson = Json { ignoreUnknownKeys = true }
 
 @Serializable
 data class CompleteTaskResult(
@@ -55,10 +58,12 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
     }
 
     suspend fun completeTask(taskId: String): CompleteTaskResult = runCatching {
-        supabase.postgrest.rpc(
+        val result = supabase.postgrest.rpc(
             "complete_task",
             buildJsonObject { put("p_task_id", taskId) }
-        ).decodeSingleOrNull<CompleteTaskResult>() ?: CompleteTaskResult(success = true)
+        )
+        if (result.data.isBlank() || result.data == "null") CompleteTaskResult(success = true)
+        else rpcJson.decodeFromString<CompleteTaskResult>(result.data)
     }.getOrElse { CompleteTaskResult(success = false) }
 
     suspend fun uncompleteTask(taskId: String) {

@@ -6,20 +6,24 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private val rpcJson = Json { ignoreUnknownKeys = true }
+
 @Singleton
 class FamilyRepository @Inject constructor(private val supabase: SupabaseClient) {
 
     suspend fun createFamily(name: String): Family {
-        return supabase.postgrest.rpc(
+        val result = supabase.postgrest.rpc(
             "create_family_with_defaults",
             buildJsonObject { put("p_name", name) }
-        ).decodeSingle<Family>()
+        )
+        return rpcJson.decodeFromString<Family>(result.data)
     }
 
     suspend fun joinFamily(code: String) {
