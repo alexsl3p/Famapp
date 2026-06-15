@@ -74,6 +74,11 @@ class AuthViewModel @Inject constructor(
         _signInError.value = null
     }
 
+    fun setSignInError(message: String) {
+        _signInError.value = message
+        _isSigningIn.value = false
+    }
+
     fun signInAsGuest() {
         _authState.value = AuthState.Authenticated(
             Profile(

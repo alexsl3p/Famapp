@@ -73,11 +73,12 @@ fun KinlyApp() {
                     onSignInWithGoogle = {
                         authViewModel.clearSignInError()
                         scope.launch {
-                            val helper = GoogleSignInHelper(context)
-                            val result = helper.signIn()
-                            if (result != null) {
-                                val (idToken, rawNonce) = result
+                            try {
+                                val helper = GoogleSignInHelper(context)
+                                val (idToken, rawNonce) = helper.signIn()
                                 authViewModel.signInWithGoogle(idToken, rawNonce)
+                            } catch (e: Exception) {
+                                authViewModel.setSignInError(e.message ?: "Ошибка входа через Google")
                             }
                         }
                     },

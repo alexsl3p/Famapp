@@ -14,7 +14,7 @@ class GoogleSignInHelper(private val context: Context) {
 
     private val credentialManager = CredentialManager.create(context)
 
-    suspend fun signIn(): Pair<String, String>? {
+    suspend fun signIn(): Pair<String, String> {
         val (rawNonce, hashedNonce) = generateNonce()
 
         val googleIdOption = GetGoogleIdOption.Builder()
@@ -33,9 +33,9 @@ class GoogleSignInHelper(private val context: Context) {
             val googleIdToken = GoogleIdTokenCredential.createFrom(result.credential.data).idToken
             googleIdToken to rawNonce
         } catch (e: GetCredentialException) {
-            null
+            throw RuntimeException("Google Sign-In error: ${e.type} — ${e.message}")
         } catch (e: Exception) {
-            null
+            throw RuntimeException("Ошибка входа: ${e.message}")
         }
     }
 
