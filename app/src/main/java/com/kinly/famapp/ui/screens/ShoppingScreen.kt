@@ -137,7 +137,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                                     onToggle = { viewModel.checkItem(item.id, !item.isChecked) }
                                 )
                                 if (index < uiState.items.size - 1) {
-                                    Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
+                                    Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
                                 }
                             }
                         }
@@ -262,29 +262,29 @@ fun ShoppingItemRow(item: ShoppingItem, onToggle: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(20.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(if (item.isChecked) ShoppingPrimary.copy(alpha = 0.2f) else Color(0x1AFFFFFF))
                 .border(1.dp, if (item.isChecked) ShoppingPrimary else Color(0x33FFFFFF), RoundedCornerShape(6.dp)),
             contentAlignment = Alignment.Center
         ) {
             if (item.isChecked) {
-                Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = ShoppingPrimary, modifier = Modifier.size(16.dp))
+                Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = ShoppingPrimary, modifier = Modifier.size(14.dp))
             }
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.title,
                 color = if (item.isChecked) Outline else OnSurface,
-                fontSize = 17.sp,
+                fontSize = 15.sp,
                 textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
             )
             if (item.productId != null) {

@@ -190,7 +190,14 @@ fun MainAppContent(
                     tasksViewModel = tasksViewModel,
                     shoppingViewModel = shoppingViewModel,
                     familyViewModel = familyViewModel,
-                    currentUserId = profile.id
+                    currentUserId = profile.id,
+                    onOpenShopping = {
+                        navController.navigate(Screen.Shopping.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
             composable(Screen.Tasks.route) {

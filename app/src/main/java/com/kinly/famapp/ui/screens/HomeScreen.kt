@@ -38,14 +38,16 @@ fun HomeScreen(
     tasksViewModel: TasksViewModel,
     shoppingViewModel: ShoppingViewModel,
     familyViewModel: FamilyViewModel,
-    currentUserId: String
+    currentUserId: String,
+    onOpenShopping: () -> Unit = {}
 ) {
     val tasksState by tasksViewModel.uiState.collectAsState()
     val shoppingState by shoppingViewModel.uiState.collectAsState()
     val familyState by familyViewModel.uiState.collectAsState()
 
+    // Показываем только задачи с проставленной звёздочкой (приоритет).
+    // Если ни одна задача не отмечена — приоритетных нет, фолбэка на обычные задачи нет.
     val priorityTask: Task? = tasksState.tasks.firstOrNull { it.isPriority && !it.isCompleted }
-        ?: tasksState.tasks.firstOrNull { !it.isCompleted }
     val previewItems = shoppingState.items.filter { !it.isChecked }.take(3)
     val members = familyState.members
     val tasksLeft = tasksState.tasks.count { !it.isCompleted }
@@ -128,7 +130,7 @@ fun HomeScreen(
                         }
                     }
                     Text(
-                        text = priorityTask?.title ?: "Нет активных задач",
+                        text = priorityTask?.title ?: "Нет приоритетных задач",
                         style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
                         color = OnSurface,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -136,6 +138,13 @@ fun HomeScreen(
                     if (priorityTask?.description != null) {
                         Text(
                             text = priorityTask.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = OnSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    } else if (priorityTask == null) {
+                        Text(
+                            text = "Отметьте задачу звёздочкой, чтобы она появилась здесь.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = OnSurfaceVariant,
                             modifier = Modifier.padding(bottom = 16.dp)
@@ -251,7 +260,15 @@ fun HomeScreen(
                             color = OnSurface
                         )
                     }
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = "Add", tint = Primary, modifier = Modifier.size(24.dp))
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Add",
+                        tint = Primary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .clickable { onOpenShopping() }
+                    )
                 }
 
                 if (previewItems.isEmpty()) {
@@ -259,11 +276,11 @@ fun HomeScreen(
                 } else {
                     previewItems.forEach { item ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(modifier = Modifier.size(20.dp).border(1.dp, Outline, RoundedCornerShape(4.dp)))
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Box(modifier = Modifier.size(18.dp).border(1.dp, Outline, RoundedCornerShape(4.dp)))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(text = item.title, style = MaterialTheme.typography.bodyMedium, color = OnSurface, modifier = Modifier.weight(1f))
                             if (item.quantity != null) {
                                 Text(text = item.quantity, color = Outline, fontSize = 13.sp)
@@ -273,12 +290,12 @@ fun HomeScreen(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                GlassButton(modifier = Modifier.fillMaxWidth()) {
+                GlassButton(modifier = Modifier.fillMaxWidth().clickable { onOpenShopping() }) {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "View All Items", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(text = "Открыть список", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     }
                 }
             }
