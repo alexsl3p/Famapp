@@ -39,6 +39,7 @@ import com.kinly.famapp.ui.theme.OnSurfaceVariant
 import com.kinly.famapp.ui.theme.Primary
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 @Composable
 fun ScannerScreen(
@@ -126,9 +127,19 @@ private fun BarcodeCamera(onBarcodeDetected: (String) -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
     val alreadyDetected = remember { AtomicBoolean(false) }
+    val providerRef = remember { AtomicReference<ProcessCameraProvider?>(null) }
+    val scannerRef = remember { AtomicReference<BarcodeScanner?>(null) }
+    val isDisposed = remember { AtomicBoolean(false) }
 
     DisposableEffect(Unit) {
-        onDispose { analysisExecutor.shutdown() }
+        onDispose {
+            // Release the camera + native detector; otherwise the back camera
+            // stays bound to the Activity lifecycle after the overlay closes.
+            isDisposed.set(true)
+            providerRef.getAndSet(null)?.unbindAll()
+            scannerRef.getAndSet(null)?.close()
+            analysisExecutor.shutdown()
+        }
     }
 
     AndroidView(
@@ -140,20 +151,28 @@ private fun BarcodeCamera(onBarcodeDetected: (String) -> Unit) {
             val providerFuture = ProcessCameraProvider.getInstance(ctx)
             providerFuture.addListener({
                 val provider = providerFuture.get()
-                val preview = Preview.Builder().build().also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
                 val options = BarcodeScannerOptions.Builder()
                     .setBarcodeFormats(
                         Barcode.FORMAT_EAN_13,
                         Barcode.FORMAT_EAN_8,
                         Barcode.FORMAT_UPC_A,
                         Barcode.FORMAT_UPC_E,
-                        Barcode.FORMAT_CODE_128,
-                        Barcode.FORMAT_QR_CODE
+                        Barcode.FORMAT_CODE_128
                     )
                     .build()
                 val scanner = BarcodeScanning.getClient(options)
+                // If the overlay was already closed before the provider became
+                // ready, don't bind an orphaned camera session.
+                if (isDisposed.get()) {
+                    provider.unbindAll()
+                    scanner.close()
+                    return@addListener
+                }
+                providerRef.set(provider)
+                scannerRef.set(scanner)
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
                 val analysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()

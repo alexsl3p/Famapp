@@ -5,6 +5,7 @@ import io.ktor.client.engine.android.Android
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -46,13 +47,18 @@ class OpenFoodFactsService @Inject constructor() {
 
     suspend fun lookup(barcode: String): ProductInfo? = runCatching {
         val normalized = normalizeBarcode(barcode)
-        if (normalized.isBlank()) return@runCatching null
+        // Retail product barcodes (EAN/UPC/ITF) are numeric. Reject anything
+        // else (QR codes, Code-128 text, etc.) so a crafted scan value cannot
+        // inject path/query metacharacters into the request URL.
+        if (!BARCODE_PATTERN.matches(normalized)) return@runCatching null
 
-        val body = client
-            .get("https://world.openfoodfacts.org/api/v3/product/$normalized.json") {
-                header("User-Agent", "KinlyFamilyOS/1.0 (Android)")
-            }
-            .bodyAsText()
+        val body = withTimeoutOrNull(REQUEST_TIMEOUT_MS) {
+            client
+                .get("https://world.openfoodfacts.org/api/v3/product/$normalized.json") {
+                    header("User-Agent", "KinlyFamilyOS/1.0 (Android)")
+                }
+                .bodyAsText()
+        } ?: return@runCatching null
 
         val product = json.decodeFromString<OffResponse>(body).product
             ?: return@runCatching null
@@ -68,9 +74,16 @@ class OpenFoodFactsService @Inject constructor() {
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() },
             packageSize = product.quantity?.trim()?.takeIf { it.isNotEmpty() },
+            // Only trust https image URLs from Open Food Facts' image host —
+            // never auto-load/persist an arbitrary URL from the response.
             imageUrl = (product.imageFrontUrl ?: product.imageUrl)
                 ?.trim()
-                ?.takeIf { it.isNotEmpty() }
+                ?.takeIf { it.startsWith("https://") && it.contains("openfoodfacts.org") }
         )
     }.getOrNull()
+
+    private companion object {
+        val BARCODE_PATTERN = Regex("\\d{6,14}")
+        const val REQUEST_TIMEOUT_MS = 8_000L
+    }
 }
