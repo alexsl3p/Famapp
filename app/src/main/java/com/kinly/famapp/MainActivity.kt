@@ -24,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import com.kinly.famapp.features.auth.AuthState
 import com.kinly.famapp.features.auth.AuthViewModel
 import com.kinly.famapp.features.auth.GoogleSignInHelper
+import com.kinly.famapp.features.auth.GoogleSignInResult
 import com.kinly.famapp.features.family.FamilyViewModel
 import com.kinly.famapp.features.inventory.InventoryViewModel
 import com.kinly.famapp.features.products.ProductViewModel
@@ -66,14 +67,17 @@ fun KinlyApp() {
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val idToken = if (result.resultCode == Activity.RESULT_OK) {
-            GoogleSignInHelper.extractIdToken(result.data)
-        } else null
-
-        when {
-            idToken != null -> scope.launch { authViewModel.signInWithGoogle(idToken, "") }
-            result.resultCode == Activity.RESULT_CANCELED -> Unit
-            else -> authViewModel.setSignInError("Google Sign-In: не удалось получить токен")
+        when (val parsed = GoogleSignInHelper.parseResult(result.data)) {
+            is GoogleSignInResult.Success ->
+                scope.launch { authViewModel.signInWithGoogle(parsed.idToken, "") }
+            is GoogleSignInResult.Failure -> {
+                // 12501 = пользователь сам отменил — не показываем как ошибку.
+                if (parsed.statusCode != 12501) {
+                    authViewModel.setSignInError(parsed.message)
+                } else {
+                    authViewModel.clearSignInError()
+                }
+            }
         }
     }
 

@@ -33,7 +33,22 @@ android {
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties["google_web_client_id"] ?: "placeholder-client-id.apps.googleusercontent.com"}\"")
     }
 
+    signingConfigs {
+        // Фиксированный debug-ключ из репозитория, чтобы SHA-1 подписи был
+        // стабильным при сборке в любом окружении (CI/контейнер/локально) —
+        // иначе Google Sign-In ломается из-за незарегистрированного SHA-1.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
