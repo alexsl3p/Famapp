@@ -220,14 +220,12 @@ fun MainAppContent(
                 ShoppingContainerScreen(
                     shoppingViewModel = shoppingViewModel,
                     productViewModel = productViewModel,
-                    inventoryViewModel = inventoryViewModel
+                    inventoryViewModel = inventoryViewModel,
+                    statsViewModel = statsViewModel
                 )
             }
             composable(Screen.Family.route) {
                 FamilyScreen(viewModel = familyViewModel, currentUserId = profile.id)
-            }
-            composable(Screen.Stats.route) {
-                StatsScreen(viewModel = statsViewModel)
             }
             composable(Screen.Profile.route) {
                 ProfileScreen(

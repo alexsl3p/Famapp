@@ -47,9 +47,14 @@ class InventoryRepository @Inject constructor(private val supabase: SupabaseClie
     }
 
     suspend fun updateQuantity(itemId: String, quantity: Double) {
-        supabase.postgrest["inventory_items"].update(
-            buildJsonObject { put("quantity", quantity) }
-        ) { filter { eq("id", itemId) } }
+        // Через RPC: при количестве 0 товар возвращается в список покупок.
+        supabase.postgrest.rpc(
+            "set_inventory_quantity",
+            buildJsonObject {
+                put("p_item_id", itemId)
+                put("p_quantity", quantity)
+            }
+        )
     }
 
     suspend fun createLocation(familyId: String, name: String, icon: String? = null): InventoryLocation =

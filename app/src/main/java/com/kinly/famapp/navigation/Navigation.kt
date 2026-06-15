@@ -52,11 +52,5 @@ val bottomNavItems = listOf(
         route = Screen.Family.route,
         selectedIcon = Icons.Filled.People,
         unselectedIcon = Icons.Outlined.People
-    ),
-    BottomNavItem(
-        label = "Статистика",
-        route = Screen.Stats.route,
-        selectedIcon = Icons.Filled.BarChart,
-        unselectedIcon = Icons.Outlined.BarChart
     )
 )

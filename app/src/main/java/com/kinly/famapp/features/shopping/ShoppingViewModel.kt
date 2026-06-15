@@ -32,6 +32,7 @@ data class ShoppingUiState(
     val lists: List<ShoppingList> = emptyList(),
     val currentList: ShoppingList? = null,
     val items: List<ShoppingItem> = emptyList(),
+    val itemsByList: Map<String, List<ShoppingItem>> = emptyMap(),
     val isLoading: Boolean = false,
     val isOffline: Boolean = false,
     val error: String? = null
@@ -55,14 +56,24 @@ class ShoppingViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val lists = shoppingRepository.getLists(familyId)
-                val firstList = lists.firstOrNull()
-                val items = if (firstList != null) shoppingRepository.getItems(firstList.id) else emptyList()
-                saveToCache(items)
-                _uiState.value = ShoppingUiState(lists = lists, currentList = firstList, items = items, isLoading = false)
-                if (firstList != null) subscribeRealtime(familyId)
+                val all = shoppingRepository.getAllItems(familyId)
+                saveToCache(all)
+                _uiState.value = ShoppingUiState(
+                    lists = lists,
+                    currentList = lists.firstOrNull(),
+                    items = all,
+                    itemsByList = all.groupBy { it.listId },
+                    isLoading = false
+                )
+                subscribeRealtime(familyId)
             } catch (e: Exception) {
                 val cached = loadFromCache()
-                _uiState.value = _uiState.value.copy(items = cached, isLoading = false, isOffline = cached.isNotEmpty())
+                _uiState.value = _uiState.value.copy(
+                    items = cached,
+                    itemsByList = cached.groupBy { it.listId },
+                    isLoading = false,
+                    isOffline = cached.isNotEmpty()
+                )
             }
         }
     }
@@ -78,10 +89,14 @@ class ShoppingViewModel @Inject constructor(
     }
 
     private suspend fun refreshItems() {
-        val listId = _uiState.value.currentList?.id ?: return
-        val items = shoppingRepository.getItems(listId)
-        saveToCache(items)
-        _uiState.value = _uiState.value.copy(items = items, isOffline = false)
+        val familyId = currentFamilyId ?: return
+        val all = shoppingRepository.getAllItems(familyId)
+        saveToCache(all)
+        _uiState.value = _uiState.value.copy(
+            items = all,
+            itemsByList = all.groupBy { it.listId },
+            isOffline = false
+        )
     }
 
     private suspend fun saveToCache(items: List<ShoppingItem>) {
@@ -96,23 +111,25 @@ class ShoppingViewModel @Inject constructor(
     }.getOrElse { emptyList() }
 
     fun checkItem(itemId: String, checked: Boolean) {
+        val newItems = _uiState.value.items.map {
+            if (it.id == itemId) it.copy(isChecked = checked) else it
+        }
         _uiState.value = _uiState.value.copy(
-            items = _uiState.value.items.map {
-                if (it.id == itemId) it.copy(isChecked = checked) else it
-            }
+            items = newItems,
+            itemsByList = newItems.groupBy { it.listId }
         )
         viewModelScope.launch {
             try {
                 shoppingRepository.checkItem(itemId, checked)
+                refreshItems()
             } catch (e: Exception) {
                 refreshItems()
             }
         }
     }
 
-    fun addItem(title: String, quantity: String? = null, unit: String? = null, productId: String? = null) {
+    fun addItem(listId: String, title: String, quantity: String? = null, unit: String? = null, productId: String? = null) {
         val familyId = currentFamilyId ?: return
-        val listId = _uiState.value.currentList?.id ?: return
         viewModelScope.launch {
             try {
                 shoppingRepository.addItem(familyId, listId, title, quantity, unit, productId)
@@ -123,22 +140,10 @@ class ShoppingViewModel @Inject constructor(
         }
     }
 
-    fun clearChecked() {
-        val listId = _uiState.value.currentList?.id ?: return
+    fun clearChecked(listId: String) {
         viewModelScope.launch {
             shoppingRepository.clearChecked(listId)
             refreshItems()
-        }
-    }
-
-    fun selectList(listId: String) {
-        if (_uiState.value.currentList?.id == listId) return
-        val list = _uiState.value.lists.firstOrNull { it.id == listId } ?: return
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(currentList = list, isLoading = true)
-            val items = shoppingRepository.getItems(listId)
-            saveToCache(items)
-            _uiState.value = _uiState.value.copy(items = items, isLoading = false, isOffline = false)
         }
     }
 
@@ -147,9 +152,10 @@ class ShoppingViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val list = shoppingRepository.createList(familyId, title)
-                val lists = _uiState.value.lists + list
-                val items = shoppingRepository.getItems(list.id)
-                _uiState.value = _uiState.value.copy(lists = lists, currentList = list, items = items)
+                _uiState.value = _uiState.value.copy(
+                    lists = _uiState.value.lists + list,
+                    currentList = _uiState.value.currentList ?: list
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }

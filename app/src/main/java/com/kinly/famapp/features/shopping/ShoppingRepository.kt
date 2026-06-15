@@ -30,6 +30,16 @@ class ShoppingRepository @Inject constructor(private val supabase: SupabaseClien
             .decodeList<ShoppingItem>()
     }.getOrElse { emptyList() }
 
+    /** Все товары семьи (по всем спискам сразу). */
+    suspend fun getAllItems(familyId: String): List<ShoppingItem> = runCatching {
+        supabase.postgrest["shopping_items"]
+            .select {
+                filter { eq("family_id", familyId) }
+                order("created_at", Order.ASCENDING)
+            }
+            .decodeList<ShoppingItem>()
+    }.getOrElse { emptyList() }
+
     suspend fun addItem(
         familyId: String,
         listId: String,

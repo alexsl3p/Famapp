@@ -14,11 +14,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LocalDining
 import androidx.compose.material.icons.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,12 +58,14 @@ private fun pluralItems(n: Int): String {
 @Composable
 fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    val productUiState by productViewModel.uiState.collectAsState()
-    val scanResult by productViewModel.scanResult.collectAsState()
-    var showAddDialog by remember { mutableStateOf(false) }
-    var showScanner by remember { mutableStateOf(false) }
-    var showListMenu by remember { mutableStateOf(false) }
     var showCreateList by remember { mutableStateOf(false) }
+    var expandedListId by remember { mutableStateOf<String?>(null) }
+
+    // По умолчанию раскрываем первый список.
+    val firstListId = uiState.lists.firstOrNull()?.id
+    LaunchedEffect(firstListId) {
+        if (expandedListId == null) expandedListId = firstListId
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -70,129 +75,47 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                 .padding(horizontal = 16.dp)
                 .padding(top = 20.dp, bottom = 120.dp)
         ) {
-            ShoppingListSelector(
-                lists = uiState.lists,
-                currentList = uiState.currentList,
-                expanded = showListMenu,
-                onExpandedChange = { showListMenu = it },
-                onSelect = { viewModel.selectList(it); showListMenu = false },
-                onCreateNew = { showListMenu = false; showCreateList = true }
+            Text(
+                text = "Списки покупок",
+                style = MaterialTheme.typography.headlineSmall,
+                color = OnSurface
             )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = uiState.currentList?.title ?: "Список покупок",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = OnSurface
-                    )
-                    Text(
-                        text = "Нажмите на товар, чтобы отметить купленным",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = OnSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
-                    )
-                }
-            }
+            Text(
+                text = "Нажмите на товар, чтобы отметить купленным",
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+            )
 
             if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Primary)
                 }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier.size(32.dp).background(Tertiary.copy(alpha = 0.2f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Outlined.LocalDining, contentDescription = null, tint = Tertiary, modifier = Modifier.size(18.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = uiState.currentList?.title ?: "Продукты",
-                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
-                        color = OnSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .background(Color(0x33272F43), RoundedCornerShape(20.dp))
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "${uiState.items.size} ${pluralItems(uiState.items.size)}",
-                            color = OnSurfaceVariant,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-
+            } else if (uiState.lists.isEmpty()) {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        if (uiState.items.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text("Список пуст. Добавьте товары!", color = OnSurfaceVariant)
-                            }
-                        } else {
-                            uiState.items.forEachIndexed { index, item ->
-                                ShoppingItemRow(
-                                    item = item,
-                                    onToggle = { viewModel.checkItem(item.id, !item.isChecked) }
-                                )
-                                if (index < uiState.items.size - 1) {
-                                    Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
-                                }
-                            }
-                        }
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("Списков нет. Создайте первый список!", color = OnSurfaceVariant)
                     }
                 }
-
-                if (uiState.items.any { it.isChecked }) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x0DFFFFFF))
-                            .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(12.dp))
-                            .clickable { viewModel.clearChecked() }
-                            .padding(vertical = 14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Outlined.DeleteSweep, contentDescription = null, tint = Secondary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Очистить купленное", color = Secondary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        }
-                    }
+            } else {
+                uiState.lists.forEach { list ->
+                    ShoppingListCard(
+                        list = list,
+                        items = uiState.itemsByList[list.id] ?: emptyList(),
+                        expanded = expandedListId == list.id,
+                        onToggleExpand = {
+                            expandedListId = if (expandedListId == list.id) null else list.id
+                        },
+                        onCheck = { item -> viewModel.checkItem(item.id, !item.isChecked) },
+                        onAdd = { title, qty -> viewModel.addItem(list.id, title, qty) },
+                        onClearChecked = { viewModel.clearChecked(list.id) }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
         }
 
-        // Scan barcode FAB (above the add FAB)
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 158.dp)
-                .size(56.dp)
-                .background(Color(0x33272F43), CircleShape)
-                .border(1.dp, Color(0x33FFFFFF), CircleShape)
-                .clip(CircleShape)
-                .clickable { showScanner = true },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(imageVector = Icons.Outlined.QrCodeScanner, contentDescription = "Scan barcode", tint = Primary, modifier = Modifier.size(26.dp))
-        }
-
+        // FAB: создать новый список
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -200,45 +123,11 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                 .size(56.dp)
                 .background(Brush.linearGradient(listOf(ShoppingPrimary, Secondary)), CircleShape)
                 .clip(CircleShape)
-                .clickable { showAddDialog = true },
+                .clickable { showCreateList = true },
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Filled.Add, contentDescription = "Add Item", tint = Color.White, modifier = Modifier.size(28.dp))
+            Icon(imageVector = Icons.Outlined.PlaylistAdd, contentDescription = "Новый список", tint = Color.White, modifier = Modifier.size(28.dp))
         }
-
-        if (showScanner) {
-            ScannerScreen(
-                onClose = { showScanner = false },
-                onBarcodeDetected = { barcode ->
-                    showScanner = false
-                    productViewModel.onBarcodeScanned(barcode)
-                }
-            )
-        }
-    }
-
-    scanResult?.let { result ->
-        ScanResultDialog(
-            result = result,
-            onDismiss = { productViewModel.clearScanResult() },
-            onAddExisting = { product ->
-                viewModel.addItem(product.name, null, productId = product.id)
-                productViewModel.clearScanResult()
-            },
-            onCreateAndAdd = { name, barcode, brand, packageSize, imageUrl, source ->
-                productViewModel.createScannedProduct(
-                    name = name,
-                    barcode = barcode,
-                    brand = brand,
-                    packageSize = packageSize,
-                    imageUrl = imageUrl,
-                    source = source
-                ) { product ->
-                    viewModel.addItem(product.name, null, productId = product.id)
-                }
-                productViewModel.clearScanResult()
-            }
-        )
     }
 
     if (showCreateList) {
@@ -250,23 +139,199 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
             }
         )
     }
+}
 
-    if (showAddDialog) {
-        AddShoppingItemDialog(
-            searchResults = productUiState.searchResults,
-            onSearchQueryChange = { productViewModel.setSearchQuery(it) },
-            onDismiss = {
-                showAddDialog = false
-                productViewModel.setSearchQuery("")
-            },
-            onConfirm = { title, quantity, productId ->
-                viewModel.addItem(title, quantity.ifBlank { null }, productId = productId)
-                productViewModel.setSearchQuery("")
-                showAddDialog = false
+@Composable
+fun ShoppingListCard(
+    list: ShoppingList,
+    items: List<ShoppingItem>,
+    expanded: Boolean,
+    onToggleExpand: () -> Unit,
+    onCheck: (ShoppingItem) -> Unit,
+    onAdd: (String, String?) -> Unit,
+    onClearChecked: () -> Unit
+) {
+    val sorted = remember(items) { items.sortedBy { it.isChecked } }
+    val visible = if (expanded) sorted else sorted.take(3)
+    val hiddenCount = sorted.size - visible.size
+    val activeCount = items.count { !it.isChecked }
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            // Заголовок списка
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleExpand() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.size(32.dp).background(Tertiary.copy(alpha = 0.2f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.LocalDining, contentDescription = null, tint = Tertiary, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(list.title, style = MaterialTheme.typography.headlineMedium.copy(fontSize = 18.sp), color = OnSurface)
+                    Text(
+                        text = if (activeCount == 0) "всё куплено" else "$activeCount ${pluralItems(activeCount)} осталось",
+                        color = OnSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "Свернуть" else "Развернуть",
+                    tint = Primary
+                )
             }
-        )
+
+            if (items.isEmpty() && !expanded) {
+                Text(
+                    "Список пуст",
+                    color = OnSurfaceVariant,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 14.dp)
+                )
+            }
+
+            if (items.isNotEmpty()) {
+                Divider(color = Color(0x1AFFFFFF))
+                visible.forEachIndexed { index, item ->
+                    ShoppingItemRow(item = item, onToggle = { onCheck(item) })
+                    if (index < visible.size - 1) {
+                        Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
+                    }
+                }
+                if (hiddenCount > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onToggleExpand() }.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Показать ещё $hiddenCount", color = Primary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+
+            if (expanded) {
+                Divider(color = Color(0x1AFFFFFF))
+                InlineAddRow(onAdd = onAdd)
+                if (items.any { it.isChecked }) {
+                    Divider(color = Color(0x1AFFFFFF))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onClearChecked() }.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = Secondary, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Очистить купленное", color = Secondary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
     }
 }
+
+/** Строка добавления товара прямо в конце списка: «+», по клику — поле + счётчик количества. */
+@Composable
+private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
+    var adding by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var qty by remember { mutableIntStateOf(1) }
+
+    if (!adding) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { adding = true }.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(ShoppingPrimary.copy(alpha = 0.2f))
+                    .border(1.dp, ShoppingPrimary, RoundedCornerShape(6.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null, tint = ShoppingPrimary, modifier = Modifier.size(14.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text("Добавить товар", color = OnSurfaceVariant, fontSize = 15.sp)
+        }
+    } else {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                placeholder = { Text("Название товара", color = Outline) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = shoppingFieldColors(),
+                singleLine = true
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StepButton(Icons.Outlined.Remove, "Меньше") { if (qty > 1) qty-- }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = "$qty",
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.widthIn(min = 24.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                StepButton(Icons.Filled.Add, "Больше") { qty++ }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = { adding = false; name = ""; qty = 1 }) {
+                    Text("Отмена", color = OnSurfaceVariant)
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (name.isNotBlank()) ShoppingPrimary else Color(0x33FFFFFF))
+                        .clickable(enabled = name.isNotBlank()) {
+                            onAdd(name.trim(), qty.toString())
+                            name = ""; qty = 1; adding = false
+                        }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        "Добавить",
+                        color = if (name.isNotBlank()) Color.White else OnSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepButton(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(Color(0x1AFFFFFF))
+            .border(1.dp, Color(0x33FFFFFF), CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = desc, tint = OnSurface, modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+private fun shoppingFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = ShoppingPrimary,
+    unfocusedBorderColor = Outline,
+    focusedTextColor = OnSurface,
+    unfocusedTextColor = OnSurface,
+    cursorColor = ShoppingPrimary
+)
 
 @Composable
 fun ShoppingItemRow(item: ShoppingItem, onToggle: () -> Unit) {
