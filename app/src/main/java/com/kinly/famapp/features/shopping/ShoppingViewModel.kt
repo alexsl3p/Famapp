@@ -1,5 +1,9 @@
 package com.kinly.famapp.features.shopping
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kinly.famapp.data.models.ShoppingItem
@@ -13,23 +17,31 @@ import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
+
+private val CACHED_ITEMS_KEY = stringPreferencesKey("shopping_items_cache")
+private val cacheJson = Json { ignoreUnknownKeys = true }
 
 data class ShoppingUiState(
     val lists: List<ShoppingList> = emptyList(),
     val currentList: ShoppingList? = null,
     val items: List<ShoppingItem> = emptyList(),
     val isLoading: Boolean = false,
+    val isOffline: Boolean = false,
     val error: String? = null
 )
 
 @HiltViewModel
 class ShoppingViewModel @Inject constructor(
     private val shoppingRepository: ShoppingRepository,
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ShoppingUiState())
@@ -41,11 +53,17 @@ class ShoppingViewModel @Inject constructor(
         currentFamilyId = familyId
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val lists = shoppingRepository.getLists(familyId)
-            val firstList = lists.firstOrNull()
-            val items = if (firstList != null) shoppingRepository.getItems(firstList.id) else emptyList()
-            _uiState.value = ShoppingUiState(lists = lists, currentList = firstList, items = items, isLoading = false)
-            if (firstList != null) subscribeRealtime(familyId)
+            try {
+                val lists = shoppingRepository.getLists(familyId)
+                val firstList = lists.firstOrNull()
+                val items = if (firstList != null) shoppingRepository.getItems(firstList.id) else emptyList()
+                saveToCache(items)
+                _uiState.value = ShoppingUiState(lists = lists, currentList = firstList, items = items, isLoading = false)
+                if (firstList != null) subscribeRealtime(familyId)
+            } catch (e: Exception) {
+                val cached = loadFromCache()
+                _uiState.value = _uiState.value.copy(items = cached, isLoading = false, isOffline = cached.isNotEmpty())
+            }
         }
     }
 
@@ -62,11 +80,22 @@ class ShoppingViewModel @Inject constructor(
     private suspend fun refreshItems() {
         val listId = _uiState.value.currentList?.id ?: return
         val items = shoppingRepository.getItems(listId)
-        _uiState.value = _uiState.value.copy(items = items)
+        saveToCache(items)
+        _uiState.value = _uiState.value.copy(items = items, isOffline = false)
     }
 
+    private suspend fun saveToCache(items: List<ShoppingItem>) {
+        runCatching {
+            dataStore.edit { it[CACHED_ITEMS_KEY] = cacheJson.encodeToString(items) }
+        }
+    }
+
+    private suspend fun loadFromCache(): List<ShoppingItem> = runCatching {
+        val json = dataStore.data.first()[CACHED_ITEMS_KEY] ?: return@runCatching emptyList()
+        cacheJson.decodeFromString<List<ShoppingItem>>(json)
+    }.getOrElse { emptyList() }
+
     fun checkItem(itemId: String, checked: Boolean) {
-        // Optimistic update
         _uiState.value = _uiState.value.copy(
             items = _uiState.value.items.map {
                 if (it.id == itemId) it.copy(isChecked = checked) else it

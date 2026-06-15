@@ -1,5 +1,6 @@
 package com.kinly.famapp.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +12,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,17 +25,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kinly.famapp.data.models.FamilyMember
 import com.kinly.famapp.data.models.Task
 import com.kinly.famapp.features.tasks.TaskFilter
 import com.kinly.famapp.features.tasks.TasksViewModel
 import com.kinly.famapp.ui.components.GlassCard
 import com.kinly.famapp.ui.theme.*
+import java.time.Instant
+import java.time.ZoneOffset
 
 @Composable
 fun TasksScreen(
     viewModel: TasksViewModel,
     familyId: String,
-    currentUserId: String
+    currentUserId: String,
+    members: List<FamilyMember> = emptyList()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filteredTasks = viewModel.getFilteredTasks()
@@ -46,6 +53,7 @@ fun TasksScreen(
         }
     }
 
+    val membersMap = remember(members) { members.associate { it.userId to it.displayName } }
     val tabs = listOf("All" to TaskFilter.ALL, "Mine" to TaskFilter.MINE, "Done" to TaskFilter.COMPLETED)
 
     Scaffold(
@@ -60,7 +68,6 @@ fun TasksScreen(
                 .padding(horizontal = 16.dp)
                 .padding(top = 20.dp, bottom = 100.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -87,7 +94,6 @@ fun TasksScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tabs
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 tabs.forEach { (label, filter) ->
                     val isSelected = uiState.filter == filter
@@ -125,6 +131,8 @@ fun TasksScreen(
                 filteredTasks.forEach { task ->
                     RealTaskCard(
                         task = task,
+                        membersMap = membersMap,
+                        currentUserId = currentUserId,
                         onComplete = { viewModel.completeTask(task.id) },
                         onUncomplete = { viewModel.uncompleteTask(task.id) }
                     )
@@ -136,9 +144,11 @@ fun TasksScreen(
 
     if (showAddDialog) {
         AddTaskDialog(
+            members = members,
+            currentUserId = currentUserId,
             onDismiss = { showAddDialog = false },
-            onConfirm = { title ->
-                viewModel.createTask(title)
+            onConfirm = { title, dueDate, assignedTo, repeatType ->
+                viewModel.createTask(title, assignedTo, dueDate, repeatType)
                 showAddDialog = false
             }
         )
@@ -148,6 +158,8 @@ fun TasksScreen(
 @Composable
 fun RealTaskCard(
     task: Task,
+    membersMap: Map<String, String> = emptyMap(),
+    currentUserId: String = "",
     onComplete: () -> Unit,
     onUncomplete: () -> Unit
 ) {
@@ -190,11 +202,26 @@ fun RealTaskCard(
                                 Text(text = task.dueDate, color = Color(0xFFB0B0C0), fontSize = 12.sp)
                             }
                         }
+                        // Attribution
+                        val creatorName = membersMap[task.createdBy]
+                        val completorName = if (task.isCompleted && task.completedBy != null) membersMap[task.completedBy] else null
+                        if (creatorName != null || completorName != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = when {
+                                    completorName != null -> "Выполнил: $completorName"
+                                    creatorName != null -> "Создал: $creatorName"
+                                    else -> ""
+                                },
+                                color = Color(0xFF7070A0),
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider(color = Color(0x1AFFFFFF))
+                HorizontalDivider(color = Color(0x1AFFFFFF))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -204,13 +231,19 @@ fun RealTaskCard(
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = if (task.repeatType == "none") "Разовая" else task.repeatType,
+                            text = when (task.repeatType) {
+                                "daily" -> "Ежедневно"
+                                "weekly" -> "Еженедельно"
+                                "monthly" -> "Ежемесячно"
+                                else -> "Разовая"
+                            },
                             color = Primary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
                     if (task.assignedTo != null) {
+                        val assigneeName = membersMap[task.assignedTo] ?: task.assignedTo.take(4)
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
@@ -219,7 +252,7 @@ fun RealTaskCard(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = task.assignedTo.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                text = assigneeName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                                 color = OnSurfaceVariant,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
@@ -232,39 +265,155 @@ fun RealTaskCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+fun AddTaskDialog(
+    members: List<FamilyMember> = emptyList(),
+    currentUserId: String = "",
+    onDismiss: () -> Unit,
+    onConfirm: (title: String, dueDate: String?, assignedTo: String?, repeatType: String) -> Unit
+) {
     var title by remember { mutableStateOf("") }
+    var dueDate by remember { mutableStateOf<String?>(null) }
+    var assignedToId by remember { mutableStateOf<String?>(null) }
+    var repeatType by remember { mutableStateOf("none") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showAssigneeDropdown by remember { mutableStateOf(false) }
+    var showRepeatDropdown by remember { mutableStateOf(false) }
+
+    val datePickerState = rememberDatePickerState()
+    val repeatOptions = listOf(
+        "none" to "Не повторяется",
+        "daily" to "Ежедневно",
+        "weekly" to "Еженедельно",
+        "monthly" to "Ежемесячно"
+    )
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dueDate = datePickerState.selectedDateMillis?.let { millis ->
+                        Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+                    }
+                    showDatePicker = false
+                }) { Text("OK", color = Primary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Отмена", color = OnSurfaceVariant) }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF1D2538),
         title = { Text("Новая задача", color = OnSurface) },
         text = {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Название задачи", color = Outline) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Primary,
-                    unfocusedBorderColor = Outline,
-                    focusedTextColor = OnSurface,
-                    unfocusedTextColor = OnSurface,
-                    cursorColor = Primary
-                ),
-                singleLine = true
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Название задачи", color = Outline) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = taskFieldColors(),
+                    singleLine = true
+                )
+
+                OutlinedButton(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, if (dueDate != null) Primary else Outline),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = if (dueDate != null) Primary else Outline)
+                ) {
+                    Icon(Icons.Outlined.CalendarToday, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(dueDate ?: "Срок (необязательно)", modifier = Modifier.weight(1f))
+                    if (dueDate != null) {
+                        Text("✕", modifier = Modifier.clickable { dueDate = null })
+                    }
+                }
+
+                if (members.isNotEmpty()) {
+                    val assigneeName = members.find { it.userId == assignedToId }?.displayName ?: "Кому (необязательно)"
+                    Box {
+                        OutlinedButton(
+                            onClick = { showAssigneeDropdown = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, if (assignedToId != null) Primary else Outline),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = if (assignedToId != null) Primary else Outline)
+                        ) {
+                            Icon(Icons.Outlined.Person, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(assigneeName, modifier = Modifier.weight(1f))
+                        }
+                        DropdownMenu(
+                            expanded = showAssigneeDropdown,
+                            onDismissRequest = { showAssigneeDropdown = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Не назначена", color = OnSurfaceVariant) },
+                                onClick = { assignedToId = null; showAssigneeDropdown = false }
+                            )
+                            members.forEach { member ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            member.displayName + if (member.userId == currentUserId) " (Вы)" else "",
+                                            color = OnSurface
+                                        )
+                                    },
+                                    onClick = { assignedToId = member.userId; showAssigneeDropdown = false }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Box {
+                    OutlinedButton(
+                        onClick = { showRepeatDropdown = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, if (repeatType != "none") Primary else Outline),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = if (repeatType != "none") Primary else Outline)
+                    ) {
+                        Icon(Icons.Outlined.Repeat, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(repeatOptions.find { it.first == repeatType }?.second ?: "Не повторяется")
+                    }
+                    DropdownMenu(
+                        expanded = showRepeatDropdown,
+                        onDismissRequest = { showRepeatDropdown = false }
+                    ) {
+                        repeatOptions.forEach { (value, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label, color = if (repeatType == value) Primary else OnSurface) },
+                                onClick = { repeatType = value; showRepeatDropdown = false }
+                            )
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
-            TextButton(onClick = { if (title.isNotBlank()) onConfirm(title.trim()) }) {
+            TextButton(onClick = { if (title.isNotBlank()) onConfirm(title.trim(), dueDate, assignedToId, repeatType) }) {
                 Text("Создать", color = Primary, fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Отмена", color = OnSurfaceVariant)
-            }
+            TextButton(onClick = onDismiss) { Text("Отмена", color = OnSurfaceVariant) }
         }
     )
 }
+
+@Composable
+private fun taskFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = Primary,
+    unfocusedBorderColor = Outline,
+    focusedTextColor = OnSurface,
+    unfocusedTextColor = OnSurface,
+    cursorColor = Primary
+)

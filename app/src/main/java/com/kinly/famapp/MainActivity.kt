@@ -140,6 +140,8 @@ fun MainAppContent(
     val shoppingViewModel: ShoppingViewModel = hiltViewModel()
     val familyViewModel: FamilyViewModel = hiltViewModel()
 
+    val familyUiState by familyViewModel.uiState.collectAsState()
+
     LaunchedEffect(familyId) {
         tasksViewModel.load(familyId, profile.id)
         shoppingViewModel.load(familyId)
@@ -176,7 +178,8 @@ fun MainAppContent(
                 TasksScreen(
                     viewModel = tasksViewModel,
                     familyId = familyId,
-                    currentUserId = profile.id
+                    currentUserId = profile.id,
+                    members = familyUiState.members
                 )
             }
             composable(Screen.Shopping.route) {

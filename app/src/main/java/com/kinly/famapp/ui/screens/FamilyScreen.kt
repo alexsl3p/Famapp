@@ -156,7 +156,7 @@ fun FamilyScreen(
 
 @Composable
 fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean) {
-    val memberColor = when (member.color) {
+    val memberColor = when (member.effectiveColor) {
         "purple" -> Primary
         "pink" -> Secondary
         "blue" -> Tertiary

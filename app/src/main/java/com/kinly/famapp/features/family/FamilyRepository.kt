@@ -41,7 +41,11 @@ class FamilyRepository @Inject constructor(private val supabase: SupabaseClient)
 
     suspend fun getMembers(familyId: String): List<FamilyMember> = runCatching {
         supabase.postgrest["family_members"]
-            .select { filter { eq("family_id", familyId) } }
+            .select(io.github.jan.supabase.postgrest.query.Columns.raw(
+                "*, profiles!user_id(full_name, avatar_url, color)"
+            )) {
+                filter { eq("family_id", familyId) }
+            }
             .decodeList<FamilyMember>()
     }.getOrElse { emptyList() }
 

@@ -10,8 +10,17 @@ data class FamilyMember(
     @SerialName("user_id") val userId: String,
     val nickname: String? = null,
     val color: String? = null,
-    @SerialName("joined_at") val joinedAt: String? = null
+    @SerialName("joined_at") val joinedAt: String? = null,
+    val profiles: EmbeddedProfile? = null
 ) {
-    val displayName: String get() = nickname ?: "Member"
-    val initial: String get() = displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "M"
+    @Serializable
+    data class EmbeddedProfile(
+        @SerialName("full_name") val fullName: String? = null,
+        @SerialName("avatar_url") val avatarUrl: String? = null,
+        val color: String? = null
+    )
+
+    val displayName: String get() = nickname ?: profiles?.fullName ?: "Участник"
+    val initial: String get() = displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "У"
+    val effectiveColor: String? get() = color ?: profiles?.color
 }
