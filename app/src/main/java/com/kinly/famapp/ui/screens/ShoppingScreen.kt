@@ -40,6 +40,18 @@ import com.kinly.famapp.features.shopping.ShoppingViewModel
 import com.kinly.famapp.ui.components.GlassCard
 import com.kinly.famapp.ui.theme.*
 
+/** Русское склонение слова «товар» по числу. */
+private fun pluralItems(n: Int): String {
+    val mod100 = n % 100
+    val mod10 = n % 10
+    return when {
+        mod100 in 11..14 -> "товаров"
+        mod10 == 1 -> "товар"
+        mod10 in 2..4 -> "товара"
+        else -> "товаров"
+    }
+}
+
 @Composable
 fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewModel) {
     val uiState by viewModel.uiState.collectAsState()
@@ -75,7 +87,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
             ) {
                 Column {
                     Text(
-                        text = uiState.currentList?.title ?: "Shopping List",
+                        text = uiState.currentList?.title ?: "Список покупок",
                         style = MaterialTheme.typography.headlineSmall,
                         color = OnSurface
                     )
@@ -116,7 +128,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "${uiState.items.size} ${if (uiState.items.size == 1) "item" else "items"}",
+                            text = "${uiState.items.size} ${pluralItems(uiState.items.size)}",
                             color = OnSurfaceVariant,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium

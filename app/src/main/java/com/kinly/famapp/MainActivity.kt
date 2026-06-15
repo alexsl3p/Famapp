@@ -191,6 +191,7 @@ fun MainAppContent(
                     shoppingViewModel = shoppingViewModel,
                     familyViewModel = familyViewModel,
                     currentUserId = profile.id,
+                    userName = profile.displayName,
                     onOpenShopping = {
                         navController.navigate(Screen.Shopping.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }

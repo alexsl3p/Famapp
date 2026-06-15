@@ -30,31 +30,31 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem(
-        label = "Home",
+        label = "Главная",
         route = Screen.Home.route,
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home
     ),
     BottomNavItem(
-        label = "Tasks",
+        label = "Задачи",
         route = Screen.Tasks.route,
         selectedIcon = Icons.Outlined.Checklist,
         unselectedIcon = Icons.Outlined.Checklist
     ),
     BottomNavItem(
-        label = "Shopping",
+        label = "Покупки",
         route = Screen.Shopping.route,
         selectedIcon = Icons.Filled.ShoppingBasket,
         unselectedIcon = Icons.Outlined.ShoppingBasket
     ),
     BottomNavItem(
-        label = "Family",
+        label = "Семья",
         route = Screen.Family.route,
         selectedIcon = Icons.Filled.People,
         unselectedIcon = Icons.Outlined.People
     ),
     BottomNavItem(
-        label = "Stats",
+        label = "Статистика",
         route = Screen.Stats.route,
         selectedIcon = Icons.Filled.BarChart,
         unselectedIcon = Icons.Outlined.BarChart

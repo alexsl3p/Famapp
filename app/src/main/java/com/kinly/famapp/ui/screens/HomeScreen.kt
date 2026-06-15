@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.ShoppingBasket
-import androidx.compose.material.icons.outlined.WbCloudy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +39,7 @@ fun HomeScreen(
     shoppingViewModel: ShoppingViewModel,
     familyViewModel: FamilyViewModel,
     currentUserId: String,
+    userName: String = "",
     onOpenShopping: () -> Unit = {},
     onOpenTasks: () -> Unit = {}
 ) {
@@ -63,9 +63,17 @@ fun HomeScreen(
             .padding(horizontal = 16.dp)
             .padding(top = 20.dp, bottom = 100.dp)
     ) {
-        // Greeting
+        // Greeting — приветствие зависит от времени суток + имя пользователя
+        val greeting = remember {
+            when (java.time.LocalTime.now().hour) {
+                in 5..11 -> "Доброе утро"
+                in 12..17 -> "Добрый день"
+                in 18..22 -> "Добрый вечер"
+                else -> "Доброй ночи"
+            }
+        }
         Text(
-            text = "Добрый день!",
+            text = if (userName.isNotBlank()) "$greeting, $userName!" else "$greeting!",
             style = MaterialTheme.typography.headlineSmall,
             color = OnSurface,
             modifier = Modifier.padding(bottom = 6.dp)
@@ -179,6 +187,58 @@ fun HomeScreen(
             }
         }
 
+        // Stats Card — сводка по семье (без погоды)
+        GlassCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$tasksLeft",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Primary
+                    )
+                    Text(
+                        text = "Осталось задач",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = OnSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "${shoppingState.items.count { !it.isChecked }}",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Secondary
+                    )
+                    Text(
+                        text = "Купить",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = OnSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "${members.size}",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Tertiary
+                    )
+                    Text(
+                        text = "Семья",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = OnSurfaceVariant
+                    )
+                }
+            }
+        }
+
         // Tasks Card
         GlassCard(
             modifier = Modifier
@@ -202,7 +262,7 @@ fun HomeScreen(
                             color = OnSurface
                         )
                     }
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = "Add", tint = Primary, modifier = Modifier.size(24.dp))
+                    Icon(imageVector = Icons.Filled.Add, contentDescription = "Добавить", tint = Primary, modifier = Modifier.size(24.dp))
                 }
 
                 if (previewTasks.isEmpty()) {
@@ -246,72 +306,6 @@ fun HomeScreen(
             }
         }
 
-        // Stats Card
-        GlassCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.WbCloudy,
-                    contentDescription = null,
-                    tint = Tertiary,
-                    modifier = Modifier.size(40.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Divider(color = Color(0x1AFFFFFF))
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "$tasksLeft",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Primary
-                        )
-                        Text(
-                            text = "Tasks Left",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = OnSurfaceVariant
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "${shoppingState.items.count { !it.isChecked }}",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Secondary
-                        )
-                        Text(
-                            text = "Купить",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = OnSurfaceVariant
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "${members.size}",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Tertiary
-                        )
-                        Text(
-                            text = "Family",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = OnSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-
         // Shopping List Card
         GlassCard(
             modifier = Modifier
@@ -330,7 +324,7 @@ fun HomeScreen(
                         Icon(imageVector = Icons.Outlined.ShoppingBasket, contentDescription = null, tint = Secondary, modifier = Modifier.size(22.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = shoppingState.currentList?.title ?: "Shopping List",
+                            text = shoppingState.currentList?.title ?: "Список покупок",
                             style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
                             color = OnSurface
                         )
@@ -385,7 +379,7 @@ fun HomeScreen(
                 ) {
                     Icon(imageVector = Icons.Outlined.Group, contentDescription = null, tint = Tertiary, modifier = Modifier.size(22.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Family", style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp), color = OnSurface)
+                    Text(text = "Семья", style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp), color = OnSurface)
                 }
 
                 if (members.isEmpty()) {

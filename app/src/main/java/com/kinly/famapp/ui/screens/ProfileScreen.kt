@@ -106,7 +106,7 @@ fun ProfileScreen(
                 )
                 if (profile.email != null) {
                     Spacer(Modifier.height(12.dp))
-                    Text("Email", color = OnSurfaceVariant, fontSize = 13.sp)
+                    Text("Эл. почта", color = OnSurfaceVariant, fontSize = 13.sp)
                     Text(profile.email, color = OnSurface, fontSize = 15.sp)
                 }
             }

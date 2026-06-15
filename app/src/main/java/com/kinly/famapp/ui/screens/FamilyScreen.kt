@@ -45,7 +45,7 @@ fun FamilyScreen(
             .padding(top = 20.dp, bottom = 100.dp)
     ) {
         Text(
-            text = uiState.family?.name ?: "Family Hub",
+            text = uiState.family?.name ?: "Семья",
             style = MaterialTheme.typography.headlineSmall,
             color = OnSurface,
             modifier = Modifier.padding(bottom = 4.dp)
@@ -229,7 +229,7 @@ fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(imageVector = Icons.Outlined.Chat, contentDescription = null, tint = Primary, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Message", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(text = "Сообщение", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     }
                 }
             }

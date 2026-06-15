@@ -71,7 +71,7 @@ fun TasksScreen(
     }
 
     val membersMap = remember(members) { members.associate { it.userId to it.displayName } }
-    val tabs = listOf("All" to TaskFilter.ALL, "Mine" to TaskFilter.MINE, "Done" to TaskFilter.COMPLETED)
+    val tabs = listOf("Все" to TaskFilter.ALL, "Мои" to TaskFilter.MINE, "Готово" to TaskFilter.COMPLETED)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -91,7 +91,7 @@ fun TasksScreen(
                 verticalAlignment = Alignment.Bottom
             ) {
                 Column {
-                    Text(text = "Family Tasks", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                    Text(text = "Задачи семьи", style = MaterialTheme.typography.headlineSmall, color = Color.White)
                     Text(
                         text = "${filteredTasks.size} задач",
                         style = MaterialTheme.typography.bodyMedium,
