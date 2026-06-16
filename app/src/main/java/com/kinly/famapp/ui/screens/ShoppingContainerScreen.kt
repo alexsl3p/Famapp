@@ -81,11 +81,11 @@ private fun SegmentedTabs(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(GlassPillBg)
-            .border(1.dp, GlassPillBorder, RoundedCornerShape(24.dp))
-            .padding(5.dp),
+            .border(1.dp, GlassPillBorder, RoundedCornerShape(20.dp))
+            .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         tabs.forEachIndexed { index, (icon, label) ->
@@ -93,16 +93,16 @@ private fun SegmentedTabs(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(46.dp)
+                    .height(38.dp)
                     .then(
                         if (selected) Modifier.shadow(
-                            elevation = 12.dp,
-                            shape = RoundedCornerShape(19.dp),
+                            elevation = 10.dp,
+                            shape = RoundedCornerShape(16.dp),
                             spotColor = GlowViolet,
                             ambientColor = GlowViolet
                         ) else Modifier
                     )
-                    .clip(RoundedCornerShape(19.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .then(
                         if (selected) Modifier
                             .background(Brush.horizontalGradient(ActivePillGradient))
@@ -116,7 +116,7 @@ private fun SegmentedTabs(
                     imageVector = icon,
                     contentDescription = label,
                     tint = if (selected) Color.White else OnSurfaceVariant,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(19.dp)
                 )
             }
         }

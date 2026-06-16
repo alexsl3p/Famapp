@@ -78,15 +78,15 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
         ) {
             Text(
                 text = "Списки покупок",
-                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp),
+                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 23.sp),
                 fontWeight = FontWeight.Bold,
                 color = OnSurface
             )
             Text(
                 text = "Нажмите на товар, чтобы отметить купленным",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = OnSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp, bottom = 22.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
 
             if (uiState.isLoading) {
@@ -121,8 +121,8 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 14.dp, bottom = 88.dp)
-                .size(98.dp),
+                .padding(end = 16.dp, bottom = 92.dp)
+                .size(84.dp),
             contentAlignment = Alignment.Center
         ) {
             // Светящийся ореол
@@ -130,20 +130,20 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                 modifier = Modifier
                     .matchParentSize()
                     .background(
-                        Brush.radialGradient(listOf(GlowMagenta.copy(alpha = 0.55f), Color.Transparent)),
+                        Brush.radialGradient(listOf(GlowMagenta.copy(alpha = 0.5f), Color.Transparent)),
                         CircleShape
                     )
             )
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .shadow(elevation = 16.dp, shape = CircleShape, spotColor = GlowMagenta, ambientColor = GlowViolet)
+                    .size(54.dp)
+                    .shadow(elevation = 14.dp, shape = CircleShape, spotColor = GlowMagenta, ambientColor = GlowViolet)
                     .background(Brush.linearGradient(AccentGradient), CircleShape)
                     .clip(CircleShape)
                     .clickable { showCreateList = true },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = Icons.Filled.Add, contentDescription = "Новый список", tint = Color.White, modifier = Modifier.size(30.dp))
+                Icon(imageVector = Icons.Filled.Add, contentDescription = "Новый список", tint = Color.White, modifier = Modifier.size(26.dp))
             }
         }
     }
@@ -181,38 +181,38 @@ fun ShoppingListCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onToggleExpand() }
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
-                        .shadow(elevation = 10.dp, shape = CircleShape, spotColor = Tertiary, ambientColor = Tertiary)
+                        .size(34.dp)
+                        .shadow(elevation = 8.dp, shape = CircleShape, spotColor = Tertiary, ambientColor = Tertiary)
                         .background(Brush.linearGradient(BadgeGradient), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Outlined.LocalDining, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Outlined.LocalDining, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         list.title,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                        fontWeight = FontWeight.SemiBold,
                         color = OnSurface
                     )
                     Text(
                         text = if (activeCount == 0) "всё куплено" else "$activeCount ${pluralItems(activeCount)} осталось",
                         color = OnSurfaceVariant,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(top = 2.dp)
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 1.dp)
                     )
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                     contentDescription = if (expanded) "Свернуть" else "Развернуть",
                     tint = Primary,
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -271,21 +271,21 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
 
     if (!adding) {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable { adding = true }.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth().clickable { adding = true }.padding(horizontal = 14.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(26.dp)
-                    .clip(RoundedCornerShape(9.dp))
+                    .size(22.dp)
+                    .clip(RoundedCornerShape(7.dp))
                     .background(ShoppingPrimary.copy(alpha = 0.18f))
-                    .border(1.5.dp, ShoppingPrimary, RoundedCornerShape(9.dp)),
+                    .border(1.dp, ShoppingPrimary, RoundedCornerShape(7.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Add, contentDescription = null, tint = ShoppingPrimary, modifier = Modifier.size(16.dp))
+                Icon(Icons.Filled.Add, contentDescription = null, tint = ShoppingPrimary, modifier = Modifier.size(14.dp))
             }
-            Spacer(Modifier.width(14.dp))
-            Text("Добавить товар", color = OnSurface, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.width(12.dp))
+            Text("Добавить товар", color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     } else {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
@@ -367,29 +367,29 @@ fun ShoppingItemRow(item: ShoppingItem, onToggle: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(26.dp)
-                .clip(RoundedCornerShape(9.dp))
+                .size(21.dp)
+                .clip(RoundedCornerShape(7.dp))
                 .background(if (item.isChecked) ShoppingPrimary.copy(alpha = 0.25f) else Color(0x14FFFFFF))
-                .border(1.5.dp, if (item.isChecked) ShoppingPrimary else Color(0x40FFFFFF), RoundedCornerShape(9.dp)),
+                .border(1.dp, if (item.isChecked) ShoppingPrimary else Color(0x40FFFFFF), RoundedCornerShape(7.dp)),
             contentAlignment = Alignment.Center
         ) {
             if (item.isChecked) {
-                Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = ShoppingPrimary, modifier = Modifier.size(16.dp))
+                Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = ShoppingPrimary, modifier = Modifier.size(13.dp))
             }
         }
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.title,
                 color = if (item.isChecked) Outline else OnSurface,
-                fontSize = 17.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
             )
