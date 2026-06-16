@@ -9,8 +9,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 /**
- * Премиальный mesh-фон под glassmorphism: глубокий navy + мягкие цветные «пятна»
- * (фиолет, маджента, индиго, циан), которые просвечивают сквозь стеклянные карточки.
+ * Glassmorphism-фон в фирменных лавандово-розовых тонах (как у кнопок):
+ * глубокая индиго-база + мягкие пастельные «пятна» (лаванда, розовый, фиолет, маджента),
+ * которые красиво просвечивают сквозь стеклянные карточки.
  */
 @Composable
 fun MeshBackground(modifier: Modifier = Modifier) {
@@ -18,34 +19,35 @@ fun MeshBackground(modifier: Modifier = Modifier) {
         val w = size.width
         val h = size.height
 
-        // База — глубокий тёмный navy с лёгким вертикальным переходом
+        // База — глубокий индиго → почти чёрный (чтобы белый текст на карточках читался)
         drawRect(
             brush = Brush.verticalGradient(
-                colors = listOf(Color(0xFF0C1124), Color(0xFF080B18))
+                colors = listOf(Color(0xFF15123A), Color(0xFF0C0A20), Color(0xFF080612))
             )
         )
 
-        fun glow(color: Color, center: Offset, radius: Float) {
+        fun glow(color: Color, cx: Float, cy: Float, r: Float) {
+            val center = Offset(w * cx, h * cy)
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(color, Color(0x00000000)),
                     center = center,
-                    radius = radius
+                    radius = w * r
                 ),
                 center = center,
-                radius = radius
+                radius = w * r
             )
         }
 
-        // Верх-слева — фиолетовый
-        glow(Color(0x665B3F9E), Offset(w * 0.05f, h * 0.02f), w * 0.85f)
-        // Верх-справа — маджента/розовый
-        glow(Color(0x59C026D3), Offset(w * 1.0f, h * 0.05f), w * 0.80f)
-        // Центр — индиго (подсветка под карточками)
-        glow(Color(0x3D4F46E5), Offset(w * 0.5f, h * 0.42f), w * 0.95f)
-        // Низ-слева — фиолетово-синий
-        glow(Color(0x4D6D28D9), Offset(w * 0.0f, h * 0.95f), w * 0.80f)
-        // Низ-справа — циан
-        glow(Color(0x3D0891B2), Offset(w * 1.0f, h * 1.0f), w * 0.75f)
+        // Верх-слева — лаванда (Primary)
+        glow(Color(0x73B79CFF), 0.02f, 0.00f, 0.90f)
+        // Верх-справа — розовый (Secondary)
+        glow(Color(0x66FFAEDA), 1.00f, 0.04f, 0.85f)
+        // Центр — фиолет (подсветка под карточками)
+        glow(Color(0x4D8B5CF6), 0.55f, 0.40f, 0.95f)
+        // Низ-слева — маджента
+        glow(Color(0x59E879F9), 0.00f, 0.92f, 0.80f)
+        // Низ-справа — сиренево-синий
+        glow(Color(0x4D7C6FF0), 1.00f, 1.00f, 0.78f)
     }
 }

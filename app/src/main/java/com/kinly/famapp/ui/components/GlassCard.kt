@@ -29,11 +29,12 @@ fun GlassCard(
         modifier = modifier
             .shadow(elevation = 10.dp, shape = shape, clip = false, spotColor = Color(0xB3000000), ambientColor = Color(0x80000000))
             .clip(shape)
-            .background(Color(0xA60E1730))
+            // Полупрозрачный тёмно-фиолетовый «стекло»-тон — фон просвечивает сквозь карточку
+            .background(Color(0x7A1B1640))
             .border(
                 BorderStroke(
                     1.dp,
-                    Brush.verticalGradient(listOf(Color(0x33FFFFFF), Color(0x0AFFFFFF)))
+                    Brush.verticalGradient(listOf(Color(0x47FFFFFF), Color(0x0FFFFFFF)))
                 ),
                 shape
             )
@@ -44,7 +45,7 @@ fun GlassCard(
                 .matchParentSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0x14FFFFFF), Color(0x00FFFFFF), Color(0x08000000))
+                        listOf(Color(0x1FFFFFFF), Color(0x00FFFFFF), Color(0x14000000))
                     )
                 )
         )
