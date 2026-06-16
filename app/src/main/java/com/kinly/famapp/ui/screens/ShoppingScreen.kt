@@ -117,19 +117,34 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
             }
         }
 
-        // FAB: создать новый список — фиолетово-розовый градиент со свечением
+        // FAB: создать новый список — фиолетово-розовый градиент с мягким свечением
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 96.dp)
-                .size(62.dp)
-                .shadow(elevation = 22.dp, shape = CircleShape, spotColor = GlowMagenta, ambientColor = GlowViolet)
-                .background(Brush.linearGradient(AccentGradient), CircleShape)
-                .clip(CircleShape)
-                .clickable { showCreateList = true },
+                .padding(end = 14.dp, bottom = 88.dp)
+                .size(98.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Filled.Add, contentDescription = "Новый список", tint = Color.White, modifier = Modifier.size(30.dp))
+            // Светящийся ореол
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.radialGradient(listOf(GlowMagenta.copy(alpha = 0.55f), Color.Transparent)),
+                        CircleShape
+                    )
+            )
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .shadow(elevation = 16.dp, shape = CircleShape, spotColor = GlowMagenta, ambientColor = GlowViolet)
+                    .background(Brush.linearGradient(AccentGradient), CircleShape)
+                    .clip(CircleShape)
+                    .clickable { showCreateList = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = Icons.Filled.Add, contentDescription = "Новый список", tint = Color.White, modifier = Modifier.size(30.dp))
+            }
         }
     }
 

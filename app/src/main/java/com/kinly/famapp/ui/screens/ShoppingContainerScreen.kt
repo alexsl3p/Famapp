@@ -104,7 +104,9 @@ private fun SegmentedTabs(
                     )
                     .clip(RoundedCornerShape(19.dp))
                     .then(
-                        if (selected) Modifier.background(Brush.horizontalGradient(ActivePillGradient))
+                        if (selected) Modifier
+                            .background(Brush.horizontalGradient(ActivePillGradient))
+                            .background(Brush.verticalGradient(listOf(Color(0x33FFFFFF), Color(0x00FFFFFF))))
                         else Modifier
                     )
                     .clickable { onSelect(index) },

@@ -1,32 +1,55 @@
 package com.kinly.famapp.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+/**
+ * Стеклянная карточка с «объёмом»: тёмная тень-подъём снизу, лёгкий блик сверху
+ * и градиентная рамка (ярче сверху) — имитация glassmorphism.
+ */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val shape = RoundedCornerShape(20.dp)
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0x8C0B1326))
+            .shadow(elevation = 18.dp, shape = shape, clip = false, spotColor = Color(0xCC000000), ambientColor = Color(0x99000000))
+            .clip(shape)
+            .background(Color(0xA60E1730))
             .border(
-                width = 1.dp,
-                color = Color(0x1AFFFFFF),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        content = content
-    )
+                BorderStroke(
+                    1.dp,
+                    Brush.verticalGradient(listOf(Color(0x33FFFFFF), Color(0x0AFFFFFF)))
+                ),
+                shape
+            )
+    ) {
+        // Верхний блик стекла
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0x14FFFFFF), Color(0x00FFFFFF), Color(0x08000000))
+                    )
+                )
+        )
+        content()
+    }
 }
 
 @Composable
@@ -34,14 +57,14 @@ fun GlassButton(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val shape = RoundedCornerShape(14.dp)
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0x0DFFFFFF))
+            .clip(shape)
+            .background(Color(0x12FFFFFF))
             .border(
-                width = 1.dp,
-                color = Color(0x1AFFFFFF),
-                shape = RoundedCornerShape(12.dp)
+                BorderStroke(1.dp, Brush.verticalGradient(listOf(Color(0x2EFFFFFF), Color(0x0AFFFFFF)))),
+                shape
             ),
         content = content
     )
