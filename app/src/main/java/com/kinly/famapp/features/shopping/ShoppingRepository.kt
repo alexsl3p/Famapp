@@ -62,8 +62,13 @@ class ShoppingRepository @Inject constructor(private val supabase: SupabaseClien
         )
     }
 
-    suspend fun checkItem(itemId: String, checked: Boolean) {
-        supabase.postgrest.rpc(
+    suspend fun updateQuantity(itemId: String, quantity: String) {
+        supabase.postgrest["shopping_items"].update(
+            buildJsonObject { put("quantity", quantity) }
+        ) { filter { eq("id", itemId) } }
+    }
+
+    suspend fun checkItem(itemId: String, checked: Boolean) {        supabase.postgrest.rpc(
             "mark_shopping_item_checked",
             buildJsonObject {
                 put("p_item_id", itemId)

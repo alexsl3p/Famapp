@@ -140,8 +140,25 @@ class ShoppingViewModel @Inject constructor(
         }
     }
 
-    fun clearChecked(listId: String) {
+    /** Выбор активного списка для дропдауна (на экране показывается один список). */
+    fun selectList(listId: String) {
+        val list = _uiState.value.lists.firstOrNull { it.id == listId } ?: return
+        _uiState.value = _uiState.value.copy(currentList = list)
+    }
+
+    /** Изменение количества товара (минимум 1). */
+    fun updateItemQuantity(itemId: String, quantity: Int) {
+        val q = quantity.coerceAtLeast(1).toString()
+        val newItems = _uiState.value.items.map {
+            if (it.id == itemId) it.copy(quantity = q) else it
+        }
+        _uiState.value = _uiState.value.copy(items = newItems, itemsByList = newItems.groupBy { it.listId })
         viewModelScope.launch {
+            runCatching { shoppingRepository.updateQuantity(itemId, q) }.onFailure { refreshItems() }
+        }
+    }
+
+    fun clearChecked(listId: String) {        viewModelScope.launch {
             shoppingRepository.clearChecked(listId)
             refreshItems()
         }
