@@ -8,11 +8,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -240,12 +243,20 @@ fun MainAppContent(
 
 @Composable
 fun BottomNavBar(currentRoute: String?, onItemSelected: (String) -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().background(Color(0xCC0B1326))) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(30.dp))
+            .background(Color(0xCC0B1326))
+            .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(30.dp))
+    ) {
         NavigationBar(
             containerColor = Color.Transparent,
             contentColor = Primary,
             tonalElevation = 0.dp,
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+            modifier = Modifier.fillMaxWidth()
         ) {
             bottomNavItems.forEach { item ->
                 val isSelected = currentRoute == item.route
