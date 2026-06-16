@@ -115,7 +115,7 @@ private fun SegmentedTabs(
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
-                    tint = if (selected) Color.White else OnSurfaceVariant,
+                    tint = if (selected) Color(0xFF0B1326) else OnSurfaceVariant,
                     modifier = Modifier.size(19.dp)
                 )
             }

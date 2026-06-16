@@ -239,6 +239,70 @@ fun HomeScreen(
             }
         }
 
+        // Shopping List Card
+        GlassCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onOpenShopping() }
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Outlined.ShoppingBasket, contentDescription = null, tint = Secondary, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = shoppingState.currentList?.title ?: "Список покупок",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
+                            color = OnSurface
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Add",
+                        tint = Primary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .clickable { onOpenShopping() }
+                    )
+                }
+
+                if (previewItems.isEmpty()) {
+                    Text("Список пуст", color = OnSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    previewItems.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.size(18.dp).border(1.dp, Outline, RoundedCornerShape(4.dp)))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(text = item.title, style = MaterialTheme.typography.bodyMedium, color = OnSurface, modifier = Modifier.weight(1f))
+                            if (item.quantity != null) {
+                                Text(text = item.quantity, color = Outline, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                GlassButton(modifier = Modifier.fillMaxWidth().clickable { onOpenShopping() }) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "Открыть список", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+
         // Tasks Card
         GlassCard(
             modifier = Modifier
@@ -301,70 +365,6 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(text = "Все задачи", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                    }
-                }
-            }
-        }
-
-        // Shopping List Card
-        GlassCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .clickable { onOpenShopping() }
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Outlined.ShoppingBasket, contentDescription = null, tint = Secondary, modifier = Modifier.size(22.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = shoppingState.currentList?.title ?: "Список покупок",
-                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
-                            color = OnSurface
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "Add",
-                        tint = Primary,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .clickable { onOpenShopping() }
-                    )
-                }
-
-                if (previewItems.isEmpty()) {
-                    Text("Список пуст", color = OnSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                } else {
-                    previewItems.forEach { item ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(modifier = Modifier.size(18.dp).border(1.dp, Outline, RoundedCornerShape(4.dp)))
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(text = item.title, style = MaterialTheme.typography.bodyMedium, color = OnSurface, modifier = Modifier.weight(1f))
-                            if (item.quantity != null) {
-                                Text(text = item.quantity, color = Outline, fontSize = 13.sp)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-                GlassButton(modifier = Modifier.fillMaxWidth().clickable { onOpenShopping() }) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = "Открыть список", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     }
                 }
             }

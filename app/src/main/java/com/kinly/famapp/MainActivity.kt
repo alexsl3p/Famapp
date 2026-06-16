@@ -276,7 +276,7 @@ fun BottomNavBar(currentRoute: String?, onItemSelected: (String) -> Unit) {
                         selectedTextColor = Primary,
                         unselectedIconColor = Color(0xFF9090A0),
                         unselectedTextColor = Color(0xFF9090A0),
-                        indicatorColor = PrimaryContainer
+                        indicatorColor = Primary
                     )
                 )
             }

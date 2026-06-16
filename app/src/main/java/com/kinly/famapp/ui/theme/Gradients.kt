@@ -6,11 +6,11 @@ import androidx.compose.ui.graphics.Color
 // Reusable gradients, glows and glass tokens for the 2026 redesign.
 // ============================================================
 
-/** Violet → magenta accent (FAB, primary actions, active highlights). */
-val AccentGradient = listOf(Color(0xFF7C3AED), Color(0xFFD946EF))
+/** Светлый лавандово-розовый акцент (FAB, основные кнопки, активные элементы). */
+val AccentGradient = listOf(Primary, Secondary)
 
-/** Softer violet pill used for the active segmented-control tab. */
-val ActivePillGradient = listOf(Color(0xFF5B3F9E), Color(0xFF7C3AED))
+/** Тот же светлый градиент для активной вкладки segmented-control. */
+val ActivePillGradient = listOf(Primary, Secondary)
 
 /** Indigo → cyan badge behind a list's icon. */
 val BadgeGradient = listOf(Color(0xFF4F46E5), Color(0xFF22B7E6))
