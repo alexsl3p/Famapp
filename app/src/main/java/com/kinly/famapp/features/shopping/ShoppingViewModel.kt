@@ -140,6 +140,15 @@ class ShoppingViewModel @Inject constructor(
         }
     }
 
+    /** Удаление товара из списка. */
+    fun deleteItem(itemId: String) {
+        val newItems = _uiState.value.items.filterNot { it.id == itemId }
+        _uiState.value = _uiState.value.copy(items = newItems, itemsByList = newItems.groupBy { it.listId })
+        viewModelScope.launch {
+            runCatching { shoppingRepository.deleteItem(itemId) }.onFailure { refreshItems() }
+        }
+    }
+
     /** Выбор активного списка для дропдауна (на экране показывается один список). */
     fun selectList(listId: String) {
         val list = _uiState.value.lists.firstOrNull { it.id == listId } ?: return

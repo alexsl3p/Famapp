@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.AddAPhoto
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Repeat
@@ -64,6 +65,7 @@ fun TasksScreen(
     val filteredTasks = viewModel.getFilteredTasks()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
+    var deletingTask by remember { mutableStateOf<Task?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(uiState.snackbarMessage) {
@@ -145,7 +147,8 @@ fun TasksScreen(
                             onUncomplete = { viewModel.uncompleteTask(task.id) },
                             onTogglePriority = { viewModel.togglePriority(task.id, !task.isPriority) },
                             onOpenComments = { viewModel.openComments(task.id) },
-                            onEdit = { editingTask = task }
+                            onEdit = { editingTask = task },
+                            onDelete = { deletingTask = task }
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -213,6 +216,28 @@ fun TasksScreen(
                     isPriority = isPriority
                 )
                 editingTask = null
+            }
+        )
+    }
+
+    deletingTask?.let { task ->
+        AlertDialog(
+            onDismissRequest = { deletingTask = null },
+            containerColor = Color(0xFF1D2538),
+            title = { Text("Удалить задачу?", color = OnSurface) },
+            text = { Text("«${task.title}» будет удалена безвозвратно.", color = OnSurfaceVariant) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteTask(task.id)
+                    deletingTask = null
+                }) {
+                    Text("Удалить", color = Secondary, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingTask = null }) {
+                    Text("Отмена", color = OnSurfaceVariant)
+                }
             }
         )
     }
@@ -368,7 +393,8 @@ fun RealTaskCard(
     onUncomplete: () -> Unit,
     onTogglePriority: () -> Unit = {},
     onOpenComments: () -> Unit = {},
-    onEdit: () -> Unit = {}
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
     val accentColor = when {
         task.isCompleted -> Outline
@@ -455,6 +481,14 @@ fun RealTaskCard(
                         Icon(
                             imageVector = Icons.Outlined.Edit,
                             contentDescription = "Редактировать",
+                            tint = Outline,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.DeleteOutline,
+                            contentDescription = "Удалить",
                             tint = Outline,
                             modifier = Modifier.size(18.dp)
                         )

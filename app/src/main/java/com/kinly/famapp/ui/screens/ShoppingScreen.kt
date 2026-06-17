@@ -3,6 +3,7 @@ package com.kinly.famapp.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -39,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -76,10 +80,13 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
     val items = currentList?.let { uiState.itemsByList[it.id] } ?: emptyList()
     val sorted = remember(items) { items.sortedBy { it.isChecked } }
     val activeCount = items.count { !it.isChecked }
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // Тап в любом пустом месте снимает фокус → черновик товара сохраняется.
+            .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
             .padding(top = 20.dp, bottom = 120.dp)
@@ -168,7 +175,8 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                             ShoppingItemRow(
                                 item = item,
                                 onToggle = { viewModel.checkItem(item.id, !item.isChecked) },
-                                onQuantityChange = { viewModel.updateItemQuantity(item.id, it) }
+                                onQuantityChange = { viewModel.updateItemQuantity(item.id, it) },
+                                onDelete = { viewModel.deleteItem(item.id) }
                             )
                             if (index < sorted.size - 1) {
                                 Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
@@ -287,6 +295,7 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
                 }
             )
             Spacer(Modifier.width(8.dp))
+            // Сохранение — без галочки: по Enter/Done или когда тапнул в любое другое место.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -301,26 +310,6 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
                     modifier = Modifier.widthIn(min = 18.dp)
                 )
                 StepButton(Icons.Filled.Add, "Больше", size = 26.dp) { qty++ }
-                Spacer(Modifier.width(2.dp))
-                // Заметная кнопка-галочка: понятно, как сохранить товар
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (name.isNotBlank()) Brush.linearGradient(AccentGradient)
-                            else SolidColor(Color(0x14FFFFFF))
-                        )
-                        .clickable { save() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Outlined.Check,
-                        contentDescription = "Сохранить товар",
-                        tint = if (name.isNotBlank()) Color(0xFF0B1326) else Outline,
-                        modifier = Modifier.size(17.dp)
-                    )
-                }
             }
         }
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -360,7 +349,8 @@ private fun shoppingFieldColors() = OutlinedTextFieldDefaults.colors(
 fun ShoppingItemRow(
     item: ShoppingItem,
     onToggle: () -> Unit,
-    onQuantityChange: (Int) -> Unit = {}
+    onQuantityChange: (Int) -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
     val qty = item.quantity?.toIntOrNull() ?: 1
     Row(
@@ -428,6 +418,23 @@ fun ShoppingItemRow(
                 modifier = Modifier.widthIn(min = 18.dp)
             )
             StepButton(Icons.Filled.Add, "Больше", size = 26.dp) { onQuantityChange(qty + 1) }
+        }
+
+        Spacer(Modifier.width(4.dp))
+        // Удалить товар из списка
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onDelete),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Outlined.DeleteOutline,
+                contentDescription = "Удалить",
+                tint = Outline,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

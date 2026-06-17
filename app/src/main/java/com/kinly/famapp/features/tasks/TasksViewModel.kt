@@ -161,6 +161,20 @@ class TasksViewModel @Inject constructor(
         }
     }
 
+    /** Удаление задачи. */
+    fun deleteTask(taskId: String) {
+        val newTasks = _uiState.value.tasks.filterNot { it.id == taskId }
+        _uiState.value = _uiState.value.copy(tasks = newTasks)
+        viewModelScope.launch {
+            try {
+                tasksRepository.deleteTask(taskId)
+                refresh()
+            } catch (e: Exception) {
+                refresh()
+            }
+        }
+    }
+
     fun togglePriority(taskId: String, isPriority: Boolean) {
         viewModelScope.launch {
             tasksRepository.setPriority(taskId, isPriority)

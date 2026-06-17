@@ -88,6 +88,14 @@ class ShoppingRepository @Inject constructor(private val supabase: SupabaseClien
         }
     }
 
+    suspend fun deleteItem(itemId: String) {
+        runCatching {
+            supabase.postgrest["shopping_items"].delete {
+                filter { eq("id", itemId) }
+            }
+        }
+    }
+
     suspend fun createList(familyId: String, title: String): ShoppingList {
         val userId = supabase.auth.currentUserOrNull()?.id ?: throw Exception("Not authenticated")
         return supabase.postgrest["shopping_lists"].insert(
