@@ -63,8 +63,43 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
         return result.data.trim().trim('"').takeIf { it.isNotBlank() && it != "null" }
     }
 
-    suspend fun setPriority(taskId: String, isPriority: Boolean) {
+    /** Множество id задач, у которых есть прикреплённое фото/файл (комментарий с image_url). */
+    suspend fun getTaskIdsWithAttachments(familyId: String): Set<String> = runCatching {
+        supabase.postgrest["task_comments"]
+            .select { filter { eq("family_id", familyId) } }
+            .decodeList<TaskComment>()
+            .filter { it.imageUrl != null }
+            .map { it.taskId }
+            .toSet()
+    }.getOrElse { emptySet() }
+
+    /** Полное редактирование задачи (название, описание, исполнитель, срок, повтор, приоритет). */
+    suspend fun updateTask(
+        taskId: String,
+        title: String,
+        description: String?,
+        assignedTo: String?,
+        dueDate: String?,
+        repeatType: String,
+        isPriority: Boolean
+    ) {
         runCatching {
+            supabase.postgrest["tasks"].update(
+                buildJsonObject {
+                    put("title", title)
+                    put("description", description)
+                    put("assigned_to", assignedTo)
+                    put("due_date", dueDate)
+                    put("repeat_type", repeatType)
+                    put("is_priority", isPriority)
+                }
+            ) {
+                filter { eq("id", taskId) }
+            }
+        }
+    }
+
+    suspend fun setPriority(taskId: String, isPriority: Boolean) {        runCatching {
             supabase.postgrest["tasks"].update(
                 buildJsonObject { put("is_priority", isPriority) }
             ) {
@@ -73,8 +108,7 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
         }
     }
 
-    suspend fun getComments(taskId: String): List<TaskComment> = runCatching {
-        supabase.postgrest["task_comments"]
+    suspend fun getComments(taskId: String): List<TaskComment> = runCatching {        supabase.postgrest["task_comments"]
             .select {
                 filter { eq("task_id", taskId) }
                 order("created_at", Order.ASCENDING)

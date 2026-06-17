@@ -23,6 +23,7 @@ enum class TaskFilter { ALL, MINE, COMPLETED }
 
 data class TasksUiState(
     val tasks: List<Task> = emptyList(),
+    val attachmentTaskIds: Set<String> = emptySet(),
     val isLoading: Boolean = false,
     val filter: TaskFilter = TaskFilter.ALL,
     val snackbarMessage: String? = null,
@@ -65,7 +66,8 @@ class TasksViewModel @Inject constructor(
     private suspend fun refresh() {
         val familyId = currentFamilyId ?: return
         val tasks = tasksRepository.getTasks(familyId)
-        _uiState.value = _uiState.value.copy(tasks = tasks, isLoading = false)
+        val attachments = tasksRepository.getTaskIdsWithAttachments(familyId)
+        _uiState.value = _uiState.value.copy(tasks = tasks, attachmentTaskIds = attachments, isLoading = false)
     }
 
     private fun subscribeRealtime(familyId: String) {
@@ -140,6 +142,25 @@ class TasksViewModel @Inject constructor(
         }
     }
 
+    fun updateTask(
+        taskId: String,
+        title: String,
+        assignedTo: String?,
+        dueDate: String?,
+        repeatType: String,
+        description: String?,
+        isPriority: Boolean
+    ) {
+        viewModelScope.launch {
+            try {
+                tasksRepository.updateTask(taskId, title, description, assignedTo, dueDate, repeatType, isPriority)
+                refresh()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
     fun togglePriority(taskId: String, isPriority: Boolean) {
         viewModelScope.launch {
             tasksRepository.setPriority(taskId, isPriority)
@@ -170,6 +191,7 @@ class TasksViewModel @Inject constructor(
                 tasksRepository.addComment(taskId, familyId, body?.takeIf { it.isNotBlank() }, imageUrl)
                 val comments = tasksRepository.getComments(taskId)
                 _commentsState.value = _commentsState.value.copy(comments = comments, isSending = false)
+                if (imageUrl != null) refresh() // обновить индикатор вложения на карточке
             } catch (e: Exception) {
                 _commentsState.value = _commentsState.value.copy(isSending = false)
                 _uiState.value = _uiState.value.copy(error = e.message)

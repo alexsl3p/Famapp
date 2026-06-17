@@ -18,8 +18,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Send
@@ -61,6 +63,7 @@ fun TasksScreen(
     val uiState by viewModel.uiState.collectAsState()
     val filteredTasks = viewModel.getFilteredTasks()
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingTask by remember { mutableStateOf<Task?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(uiState.snackbarMessage) {
@@ -85,28 +88,13 @@ fun TasksScreen(
                 .padding(horizontal = 16.dp)
                 .padding(top = 20.dp, bottom = 100.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Column {
-                    Text(text = "Задачи семьи", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                    Text(
-                        text = "${filteredTasks.size} задач",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFB0B0C0)
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .background(Brush.horizontalGradient(listOf(Primary, Secondary)), RoundedCornerShape(12.dp))
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { showAddDialog = true }
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                ) {
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = "Add Task", tint = Color(0xFF0B1326), modifier = Modifier.size(20.dp))
-                }
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Text(text = "Задачи семьи", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Text(
+                    text = "${filteredTasks.size} задач",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFB0B0C0)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -138,24 +126,51 @@ fun TasksScreen(
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Primary)
                 }
-            } else if (filteredTasks.isEmpty()) {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("Задач нет", color = OnSurfaceVariant)
+            } else {
+                if (filteredTasks.isEmpty()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text("Задач нет", color = OnSurfaceVariant)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                } else {
+                    filteredTasks.forEach { task ->
+                        RealTaskCard(
+                            task = task,
+                            membersMap = membersMap,
+                            currentUserId = currentUserId,
+                            hasAttachment = task.id in uiState.attachmentTaskIds,
+                            onComplete = { viewModel.completeTask(task.id) },
+                            onUncomplete = { viewModel.uncompleteTask(task.id) },
+                            onTogglePriority = { viewModel.togglePriority(task.id, !task.isPriority) },
+                            onOpenComments = { viewModel.openComments(task.id) },
+                            onEdit = { editingTask = task }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
-            } else {
-                filteredTasks.forEach { task ->
-                    RealTaskCard(
-                        task = task,
-                        membersMap = membersMap,
-                        currentUserId = currentUserId,
-                        onComplete = { viewModel.completeTask(task.id) },
-                        onUncomplete = { viewModel.uncompleteTask(task.id) },
-                        onTogglePriority = { viewModel.togglePriority(task.id, !task.isPriority) },
-                        onOpenComments = { viewModel.openComments(task.id) }
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+
+                // Кнопка добавления — как «Добавить товар» в покупках
+                if (uiState.filter != TaskFilter.COMPLETED) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { showAddDialog = true }.padding(horizontal = 14.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Brush.linearGradient(listOf(Primary, Secondary))),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text("Добавить задачу", color = OnSurface, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
                 }
             }
         }
@@ -177,6 +192,27 @@ fun TasksScreen(
                     photoBytes = photoBytes
                 )
                 showAddDialog = false
+            }
+        )
+    }
+
+    editingTask?.let { task ->
+        AddTaskDialog(
+            members = members,
+            currentUserId = currentUserId,
+            initial = task,
+            onDismiss = { editingTask = null },
+            onConfirm = { title, dueDate, assignedTo, repeatType, description, isPriority, _ ->
+                viewModel.updateTask(
+                    taskId = task.id,
+                    title = title,
+                    assignedTo = assignedTo,
+                    dueDate = dueDate,
+                    repeatType = repeatType,
+                    description = description,
+                    isPriority = isPriority
+                )
+                editingTask = null
             }
         )
     }
@@ -327,10 +363,12 @@ fun RealTaskCard(
     task: Task,
     membersMap: Map<String, String> = emptyMap(),
     currentUserId: String = "",
+    hasAttachment: Boolean = false,
     onComplete: () -> Unit,
     onUncomplete: () -> Unit,
     onTogglePriority: () -> Unit = {},
-    onOpenComments: () -> Unit = {}
+    onOpenComments: () -> Unit = {},
+    onEdit: () -> Unit = {}
 ) {
     val accentColor = when {
         task.isCompleted -> Outline
@@ -404,6 +442,23 @@ fun RealTaskCard(
                             )
                         }
                     }
+                    if (hasAttachment) {
+                        Icon(
+                            imageVector = Icons.Outlined.AttachFile,
+                            contentDescription = "Есть вложение",
+                            tint = Tertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Редактировать",
+                            tint = Outline,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     IconButton(onClick = onTogglePriority, modifier = Modifier.size(28.dp)) {
                         Icon(
                             imageVector = if (task.isPriority) Icons.Filled.Star else Icons.Outlined.StarBorder,
@@ -464,6 +519,7 @@ fun RealTaskCard(
 fun AddTaskDialog(
     members: List<FamilyMember> = emptyList(),
     currentUserId: String = "",
+    initial: Task? = null,
     onDismiss: () -> Unit,
     onConfirm: (
         title: String,
@@ -475,12 +531,13 @@ fun AddTaskDialog(
         photoBytes: ByteArray?
     ) -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var dueDate by remember { mutableStateOf<String?>(null) }
-    var assignedToId by remember { mutableStateOf<String?>(null) }
-    var repeatType by remember { mutableStateOf("none") }
-    var isPriority by remember { mutableStateOf(false) }
+    val isEdit = initial != null
+    var title by remember { mutableStateOf(initial?.title ?: "") }
+    var description by remember { mutableStateOf(initial?.description ?: "") }
+    var dueDate by remember { mutableStateOf(initial?.dueDate) }
+    var assignedToId by remember { mutableStateOf(initial?.assignedTo) }
+    var repeatType by remember { mutableStateOf(initial?.repeatType ?: "none") }
+    var isPriority by remember { mutableStateOf(initial?.isPriority ?: false) }
     var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAssigneeDropdown by remember { mutableStateOf(false) }
@@ -517,7 +574,7 @@ fun AddTaskDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF1D2538),
-        title = { Text("Новая задача", color = OnSurface) },
+        title = { Text(if (isEdit) "Редактировать задачу" else "Новая задача", color = OnSurface) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -557,18 +614,20 @@ fun AddTaskDialog(
                     Text("Приоритетная задача", color = if (isPriority) Secondary else OnSurfaceVariant, fontSize = 14.sp)
                 }
 
-                // Фото
-                OutlinedButton(
-                    onClick = pickPhoto,
-                    modifier = Modifier.fillMaxWidth(),
-                    border = BorderStroke(1.dp, if (photoBytes != null) Primary else Outline),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = if (photoBytes != null) Primary else Outline)
-                ) {
-                    Icon(Icons.Outlined.AddAPhoto, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (photoBytes != null) "Фото прикреплено" else "Добавить фото (необязательно)", modifier = Modifier.weight(1f))
-                    if (photoBytes != null) {
-                        Text("✕", modifier = Modifier.clickable { photoBytes = null })
+                // Фото (только при создании; в режиме редактирования фото добавляются через комментарии)
+                if (!isEdit) {
+                    OutlinedButton(
+                        onClick = pickPhoto,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, if (photoBytes != null) Primary else Outline),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = if (photoBytes != null) Primary else Outline)
+                    ) {
+                        Icon(Icons.Outlined.AddAPhoto, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (photoBytes != null) "Фото прикреплено" else "Добавить фото (необязательно)", modifier = Modifier.weight(1f))
+                        if (photoBytes != null) {
+                            Text("✕", modifier = Modifier.clickable { photoBytes = null })
+                        }
                     }
                 }
 
@@ -661,7 +720,7 @@ fun AddTaskDialog(
                     )
                 }
             }) {
-                Text("Создать", color = Primary, fontWeight = FontWeight.SemiBold)
+                Text(if (isEdit) "Сохранить" else "Создать", color = Primary, fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {

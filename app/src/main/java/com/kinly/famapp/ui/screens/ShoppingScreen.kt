@@ -6,6 +6,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -196,12 +204,17 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
     }
 }
 
-/** Строка добавления товара прямо в конце списка: «+», по клику — поле + счётчик количества. */
+/**
+ * Добавление товара как в Google Keep: по клику на «Добавить товар» сразу появляется
+ * новая строка в том же виде, что и товары (чекбокс + поле ввода названия + счётчик).
+ * Подтверждение — Enter/Done: товар добавляется и поле очищается для следующего.
+ */
 @Composable
 private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
     var adding by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var qty by remember { mutableIntStateOf(1) }
+    val focusRequester = remember { FocusRequester() }
 
     if (!adding) {
         Row(
@@ -212,62 +225,69 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
                 modifier = Modifier
                     .size(22.dp)
                     .clip(RoundedCornerShape(7.dp))
-                    .background(ShoppingPrimary.copy(alpha = 0.18f))
-                    .border(1.dp, ShoppingPrimary, RoundedCornerShape(7.dp)),
+                    .background(Brush.linearGradient(AccentGradient)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Add, contentDescription = null, tint = ShoppingPrimary, modifier = Modifier.size(14.dp))
+                Icon(Icons.Filled.Add, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(15.dp))
             }
             Spacer(Modifier.width(12.dp))
             Text("Добавить товар", color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     } else {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
-            OutlinedTextField(
+        // Строка-черновик в том же виде, что и товар
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(Color(0x14FFFFFF))
+                    .border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(7.dp))
+            )
+            Spacer(Modifier.width(12.dp))
+            BasicTextField(
                 value = name,
                 onValueChange = { name = it },
-                placeholder = { Text("Название товара", color = Outline) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = shoppingFieldColors(),
-                singleLine = true
+                singleLine = true,
+                textStyle = TextStyle(color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                cursorBrush = SolidColor(ShoppingPrimary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (name.isNotBlank()) {
+                        onAdd(name.trim(), qty.toString())
+                        name = ""; qty = 1
+                    } else {
+                        adding = false
+                    }
+                }),
+                modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                decorationBox = { inner ->
+                    Box {
+                        if (name.isEmpty()) Text("Название товара", color = Outline, fontSize = 14.sp)
+                        inner()
+                    }
+                }
             )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StepButton(Icons.Outlined.Remove, "Меньше") { if (qty > 1) qty-- }
-                Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                StepButton(Icons.Outlined.Remove, "Меньше", size = 26.dp) { if (qty > 1) qty-- }
                 Text(
                     text = "$qty",
                     color = OnSurface,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.widthIn(min = 24.dp)
+                    modifier = Modifier.widthIn(min = 18.dp)
                 )
-                Spacer(Modifier.width(10.dp))
-                StepButton(Icons.Filled.Add, "Больше") { qty++ }
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = { adding = false; name = ""; qty = 1 }) {
-                    Text("Отмена", color = OnSurfaceVariant)
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (name.isNotBlank()) ShoppingPrimary else Color(0x33FFFFFF))
-                        .clickable(enabled = name.isNotBlank()) {
-                            onAdd(name.trim(), qty.toString())
-                            name = ""; qty = 1; adding = false
-                        }
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        "Добавить",
-                        color = if (name.isNotBlank()) Color.White else OnSurfaceVariant,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
-                }
+                StepButton(Icons.Filled.Add, "Больше", size = 26.dp) { qty++ }
             }
         }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
     }
 }
 
