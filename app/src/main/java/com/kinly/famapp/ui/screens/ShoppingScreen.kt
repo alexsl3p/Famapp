@@ -11,6 +11,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -247,24 +249,38 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
                     .border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(7.dp))
             )
             Spacer(Modifier.width(12.dp))
+            val save: () -> Unit = {
+                if (name.isNotBlank()) {
+                    onAdd(name.trim(), qty.toString())
+                    name = ""; qty = 1
+                    focusRequester.requestFocus()
+                } else {
+                    adding = false
+                }
+            }
             BasicTextField(
                 value = name,
                 onValueChange = { name = it },
                 singleLine = true,
                 textStyle = TextStyle(color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                 cursorBrush = SolidColor(ShoppingPrimary),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = {
-                    if (name.isNotBlank()) {
-                        onAdd(name.trim(), qty.toString())
-                        name = ""; qty = 1
-                    } else {
-                        adding = false
-                    }
-                }),
-                modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = { save() }),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { state ->
+                        // Сохраняем при потере фокуса, чтобы набранный товар не пропал
+                        if (!state.isFocused && name.isNotBlank()) {
+                            onAdd(name.trim(), qty.toString())
+                            name = ""; qty = 1
+                        }
+                    },
                 decorationBox = { inner ->
-                    Box {
+                    Box(contentAlignment = Alignment.CenterStart) {
                         if (name.isEmpty()) Text("Название товара", color = Outline, fontSize = 14.sp)
                         inner()
                     }
@@ -285,6 +301,26 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
                     modifier = Modifier.widthIn(min = 18.dp)
                 )
                 StepButton(Icons.Filled.Add, "Больше", size = 26.dp) { qty++ }
+                Spacer(Modifier.width(2.dp))
+                // Заметная кнопка-галочка: понятно, как сохранить товар
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (name.isNotBlank()) Brush.linearGradient(AccentGradient)
+                            else SolidColor(Color(0x14FFFFFF))
+                        )
+                        .clickable { save() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.Check,
+                        contentDescription = "Сохранить товар",
+                        tint = if (name.isNotBlank()) Color(0xFF0B1326) else Outline,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
             }
         }
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
