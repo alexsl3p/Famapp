@@ -9,8 +9,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,15 +35,20 @@ import com.kinly.famapp.features.auth.GoogleSignInHelper
 import com.kinly.famapp.features.auth.GoogleSignInResult
 import com.kinly.famapp.features.family.FamilyViewModel
 import com.kinly.famapp.features.inventory.InventoryViewModel
+import com.kinly.famapp.features.notifications.NotificationViewModel
 import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
 import com.kinly.famapp.features.stats.StatsViewModel
 import com.kinly.famapp.features.tasks.TasksViewModel
 import com.kinly.famapp.navigation.Screen
 import com.kinly.famapp.navigation.bottomNavItems
+import com.kinly.famapp.features.voice.VoiceCommand
+import com.kinly.famapp.features.voice.VoiceCommandParser
 import com.kinly.famapp.ui.components.KinlyTopBar
 import com.kinly.famapp.ui.components.MeshBackground
+import com.kinly.famapp.ui.components.rememberVoiceLauncher
 import com.kinly.famapp.ui.screens.*
+import com.kinly.famapp.ui.theme.AccentGradient
 import com.kinly.famapp.ui.theme.FamAppTheme
 import com.kinly.famapp.ui.theme.Primary
 import com.kinly.famapp.ui.theme.PrimaryContainer
@@ -152,8 +162,40 @@ fun MainAppContent(
     val productViewModel: ProductViewModel = hiltViewModel()
     val inventoryViewModel: InventoryViewModel = hiltViewModel()
     val statsViewModel: StatsViewModel = hiltViewModel()
+    val notificationViewModel: NotificationViewModel = hiltViewModel()
 
     val familyUiState by familyViewModel.uiState.collectAsState()
+    val notificationState by notificationViewModel.uiState.collectAsState()
+    val shoppingUiState by shoppingViewModel.uiState.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val voiceScope = rememberCoroutineScope()
+
+    val launchVoice = rememberVoiceLauncher(
+        onResult = { spoken ->
+            when (val cmd = VoiceCommandParser.parse(spoken)) {
+                is VoiceCommand.AddShopping -> {
+                    val listId = shoppingUiState.currentList?.id ?: shoppingUiState.lists.firstOrNull()?.id
+                    if (listId != null) {
+                        shoppingViewModel.addItem(listId, cmd.title)
+                        voiceScope.launch { snackbarHostState.showSnackbar("🛒 В список: ${cmd.title}") }
+                    } else {
+                        voiceScope.launch { snackbarHostState.showSnackbar("Сначала создайте список покупок") }
+                    }
+                }
+                is VoiceCommand.AddTask -> {
+                    tasksViewModel.createTask(title = cmd.title)
+                    voiceScope.launch { snackbarHostState.showSnackbar("✅ Задача: ${cmd.title}") }
+                }
+                is VoiceCommand.Unknown -> {
+                    voiceScope.launch { snackbarHostState.showSnackbar("Не понял: «${cmd.raw}». Скажите «добавь…» или «задача…»") }
+                }
+            }
+        },
+        onError = {
+            voiceScope.launch { snackbarHostState.showSnackbar("Голосовой ввод недоступен на устройстве") }
+        }
+    )
 
     LaunchedEffect(familyId) {
         tasksViewModel.load(familyId, profile.id)
@@ -162,6 +204,7 @@ fun MainAppContent(
         productViewModel.load(familyId)
         inventoryViewModel.load(familyId)
         statsViewModel.load(familyId)
+        notificationViewModel.load(profile.id)
     }
 
     Scaffold(
@@ -170,7 +213,9 @@ fun MainAppContent(
             KinlyTopBar(
                 userInitial = profile.initial,
                 avatarUrl = profile.avatarUrl,
-                onAvatarClick = { navController.navigate(Screen.Profile.route) }
+                unreadCount = notificationState.unreadCount,
+                onAvatarClick = { navController.navigate(Screen.Profile.route) },
+                onBellClick = { navController.navigate(Screen.Notifications.route) }
             )
         },
         bottomBar = {
@@ -181,6 +226,26 @@ fun MainAppContent(
                     restoreState = true
                 }
             })
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            // Голосовая команда: «добавь в список молоко» / «задача вынести мусор»
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 6.dp)
+                    .size(58.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(AccentGradient))
+                    .clickable { launchVoice() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.Mic,
+                    contentDescription = "Голосовая команда",
+                    tint = Color(0xFF0B1326),
+                    modifier = Modifier.size(26.dp)
+                )
+            }
         }
     ) { paddingValues ->
         NavHost(
@@ -234,6 +299,12 @@ fun MainAppContent(
                 ProfileScreen(
                     profile = profile,
                     authViewModel = authViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.Notifications.route) {
+                NotificationsScreen(
+                    viewModel = notificationViewModel,
                     onBack = { navController.popBackStack() }
                 )
             }

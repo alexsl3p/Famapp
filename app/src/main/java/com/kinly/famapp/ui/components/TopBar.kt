@@ -28,7 +28,9 @@ fun KinlyTopBar(
     showUserAvatar: Boolean = true,
     userInitial: String = "S",
     avatarUrl: String? = null,
-    onAvatarClick: () -> Unit = {}
+    unreadCount: Int = 0,
+    onAvatarClick: () -> Unit = {},
+    onBellClick: () -> Unit = {}
 ) {
     Row(
         modifier = modifier
@@ -78,14 +80,34 @@ fun KinlyTopBar(
             letterSpacing = (-0.5).sp
         )
 
-        // Notification bell
-        IconButton(onClick = {}) {
-            Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = "Notifications",
-                tint = Primary,
-                modifier = Modifier.size(24.dp)
-            )
+        // Notification bell с бейджем непрочитанных
+        IconButton(onClick = onBellClick) {
+            Box(contentAlignment = Alignment.TopEnd) {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = "Уведомления",
+                    tint = Primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                if (unreadCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = 5.dp, y = (-3).dp)
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFF4D6D))
+                            .border(1.5.dp, Color(0xFF0B1326), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                            color = Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
     }
 }
