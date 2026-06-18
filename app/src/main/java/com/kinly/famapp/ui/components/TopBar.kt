@@ -73,7 +73,7 @@ fun KinlyTopBar(
 
         // Title
         Text(
-            text = "Kinly",
+            text = "Family OS",
             color = Primary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
