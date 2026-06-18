@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -139,11 +140,10 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                         Box(
                             modifier = Modifier
                                 .size(34.dp)
-                                .shadow(elevation = 8.dp, shape = CircleShape, spotColor = Tertiary, ambientColor = Tertiary)
-                                .background(Brush.linearGradient(BadgeGradient), CircleShape),
+                                .background(Brush.linearGradient(AccentGradient), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Outlined.LocalDining, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
+                            Icon(Icons.Outlined.LocalDining, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(17.dp))
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
@@ -282,10 +282,14 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
                     .weight(1f)
                     .focusRequester(focusRequester)
                     .onFocusChanged { state ->
-                        // Сохраняем при потере фокуса, чтобы набранный товар не пропал
-                        if (!state.isFocused && name.isNotBlank()) {
-                            onAdd(name.trim(), qty.toString())
-                            name = ""; qty = 1
+                        // Потеряли фокус (тапнули в другое место):
+                        //   есть текст → сохраняем, пусто → просто убираем черновик.
+                        if (!state.isFocused) {
+                            if (name.isNotBlank()) {
+                                onAdd(name.trim(), qty.toString())
+                                name = ""; qty = 1
+                            }
+                            adding = false
                         }
                     },
                 decorationBox = { inner ->
@@ -311,6 +315,17 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
                     modifier = Modifier.widthIn(min = 18.dp)
                 )
                 StepButton(Icons.Filled.Add, "Больше", size = 26.dp) { qty++ }
+                Spacer(Modifier.width(2.dp))
+                // Передумал добавлять — закрыть черновик
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .clickable { name = ""; qty = 1; adding = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.Close, contentDescription = "Отменить", tint = Outline, modifier = Modifier.size(18.dp))
+                }
             }
         }
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
