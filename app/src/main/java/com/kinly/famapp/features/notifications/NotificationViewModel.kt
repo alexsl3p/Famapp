@@ -1,5 +1,9 @@
 package com.kinly.famapp.features.notifications
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kinly.famapp.data.models.Notification
@@ -17,16 +21,39 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Настройки: какие типы уведомлений показывать. */
+data class NotificationSettings(
+    val shopping: Boolean = true,
+    val assigned: Boolean = true,
+    val created: Boolean = true,
+    val completed: Boolean = true
+) {
+    fun isEnabled(type: String): Boolean = when (type) {
+        "shopping_added" -> shopping
+        "task_assigned" -> assigned
+        "task_created" -> created
+        "task_completed" -> completed
+        else -> true
+    }
+}
+
 data class NotificationUiState(
     val notifications: List<Notification> = emptyList(),
     val unreadCount: Int = 0,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val settings: NotificationSettings = NotificationSettings()
 )
+
+private val KEY_SHOPPING = booleanPreferencesKey("notif_shopping")
+private val KEY_ASSIGNED = booleanPreferencesKey("notif_assigned")
+private val KEY_CREATED = booleanPreferencesKey("notif_created")
+private val KEY_COMPLETED = booleanPreferencesKey("notif_completed")
 
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
     private val repository: NotificationRepository,
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationUiState())
@@ -35,22 +62,47 @@ class NotificationViewModel @Inject constructor(
     private var userId: String? = null
     private var subscribed = false
 
+    private var rawList: List<Notification> = emptyList()
+    private var settings = NotificationSettings()
+
     fun load(uid: String) {
         userId = uid
+        observeSettings()
         refresh()
         subscribeRealtime(uid)
+    }
+
+    private fun observeSettings() {
+        viewModelScope.launch {
+            dataStore.data.collect { prefs ->
+                settings = NotificationSettings(
+                    shopping = prefs[KEY_SHOPPING] ?: true,
+                    assigned = prefs[KEY_ASSIGNED] ?: true,
+                    created = prefs[KEY_CREATED] ?: true,
+                    completed = prefs[KEY_COMPLETED] ?: true
+                )
+                emit()
+            }
+        }
     }
 
     private fun refresh() {
         val uid = userId ?: return
         viewModelScope.launch {
-            val list = repository.getNotifications(uid)
-            _uiState.value = _uiState.value.copy(
-                notifications = list,
-                unreadCount = list.count { !it.isRead },
-                isLoading = false
-            )
+            rawList = repository.getNotifications(uid)
+            emit()
         }
+    }
+
+    /** Пересобирает видимый список с учётом настроек. */
+    private fun emit() {
+        val filtered = rawList.filter { settings.isEnabled(it.type) }
+        _uiState.value = _uiState.value.copy(
+            notifications = filtered,
+            unreadCount = filtered.count { !it.isRead },
+            isLoading = false,
+            settings = settings
+        )
     }
 
     private fun subscribeRealtime(uid: String) {
@@ -68,16 +120,24 @@ class NotificationViewModel @Inject constructor(
     /** Помечает все уведомления прочитанными (вызывается при открытии экрана). */
     fun markAllRead() {
         val uid = userId ?: return
-        _uiState.value = _uiState.value.copy(
-            notifications = _uiState.value.notifications.map { it.copy(isRead = true) },
-            unreadCount = 0
-        )
+        rawList = rawList.map { it.copy(isRead = true) }
+        emit()
         viewModelScope.launch { repository.markAllRead(uid) }
     }
 
     fun clearAll() {
         val uid = userId ?: return
-        _uiState.value = _uiState.value.copy(notifications = emptyList(), unreadCount = 0)
+        rawList = emptyList()
+        emit()
         viewModelScope.launch { repository.clearAll(uid) }
+    }
+
+    fun setShopping(enabled: Boolean) = saveSetting(KEY_SHOPPING, enabled)
+    fun setAssigned(enabled: Boolean) = saveSetting(KEY_ASSIGNED, enabled)
+    fun setCreated(enabled: Boolean) = saveSetting(KEY_CREATED, enabled)
+    fun setCompleted(enabled: Boolean) = saveSetting(KEY_COMPLETED, enabled)
+
+    private fun saveSetting(key: Preferences.Key<Boolean>, enabled: Boolean) {
+        viewModelScope.launch { dataStore.edit { it[key] = enabled } }
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.FabPosition
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,7 +47,7 @@ import com.kinly.famapp.features.voice.VoiceCommand
 import com.kinly.famapp.features.voice.VoiceCommandParser
 import com.kinly.famapp.ui.components.KinlyTopBar
 import com.kinly.famapp.ui.components.MeshBackground
-import com.kinly.famapp.ui.components.rememberVoiceLauncher
+import com.kinly.famapp.ui.components.VoiceDictationDialog
 import com.kinly.famapp.ui.screens.*
 import com.kinly.famapp.ui.theme.AccentGradient
 import com.kinly.famapp.ui.theme.FamAppTheme
@@ -170,36 +171,39 @@ fun MainAppContent(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val voiceScope = rememberCoroutineScope()
+    var showVoiceDialog by remember { mutableStateOf(false) }
 
-    val launchVoice = rememberVoiceLauncher(
-        onResult = { spoken ->
-            when (val cmd = VoiceCommandParser.parse(spoken)) {
-                is VoiceCommand.AddShopping -> {
-                    val listId = shoppingUiState.currentList?.id ?: shoppingUiState.lists.firstOrNull()?.id
-                    if (listId != null) {
-                        cmd.titles.forEach { shoppingViewModel.addItem(listId, it) }
-                        val msg = if (cmd.titles.size == 1) "🛒 В список: ${cmd.titles.first()}"
-                                  else "🛒 Добавлено (${cmd.titles.size}): ${cmd.titles.joinToString(", ")}"
-                        voiceScope.launch { snackbarHostState.showSnackbar(msg) }
-                    } else {
-                        voiceScope.launch { snackbarHostState.showSnackbar("Сначала создайте список покупок") }
-                    }
-                }
-                is VoiceCommand.AddTask -> {
-                    cmd.titles.forEach { tasksViewModel.createTask(title = it) }
-                    val msg = if (cmd.titles.size == 1) "✅ Задача: ${cmd.titles.first()}"
-                              else "✅ Задачи (${cmd.titles.size}): ${cmd.titles.joinToString(", ")}"
+    val handleVoiceResult: (String) -> Unit = { spoken ->
+        when (val cmd = VoiceCommandParser.parse(spoken)) {
+            is VoiceCommand.AddShopping -> {
+                val listId = shoppingUiState.currentList?.id ?: shoppingUiState.lists.firstOrNull()?.id
+                if (listId != null) {
+                    cmd.titles.forEach { shoppingViewModel.addItem(listId, it) }
+                    val msg = if (cmd.titles.size == 1) "🛒 В список: ${cmd.titles.first()}"
+                              else "🛒 Добавлено (${cmd.titles.size}): ${cmd.titles.joinToString(", ")}"
                     voiceScope.launch { snackbarHostState.showSnackbar(msg) }
-                }
-                is VoiceCommand.Unknown -> {
-                    voiceScope.launch { snackbarHostState.showSnackbar("Не понял: «${cmd.raw}». Скажите «добавь…» или «задача…»") }
+                } else {
+                    voiceScope.launch { snackbarHostState.showSnackbar("Сначала создайте список покупок") }
                 }
             }
-        },
-        onError = {
-            voiceScope.launch { snackbarHostState.showSnackbar("Голосовой ввод недоступен на устройстве") }
+            is VoiceCommand.AddTask -> {
+                cmd.titles.forEach { tasksViewModel.createTask(title = it) }
+                val msg = if (cmd.titles.size == 1) "✅ Задача: ${cmd.titles.first()}"
+                          else "✅ Задачи (${cmd.titles.size}): ${cmd.titles.joinToString(", ")}"
+                voiceScope.launch { snackbarHostState.showSnackbar(msg) }
+            }
+            is VoiceCommand.Unknown -> {
+                voiceScope.launch { snackbarHostState.showSnackbar("Не понял: «${cmd.raw}». Скажите «добавь…» или «задача…»") }
+            }
         }
-    )
+    }
+
+    if (showVoiceDialog) {
+        VoiceDictationDialog(
+            onResult = handleVoiceResult,
+            onDismiss = { showVoiceDialog = false }
+        )
+    }
 
     LaunchedEffect(familyId) {
         tasksViewModel.load(familyId, profile.id)
@@ -232,6 +236,7 @@ fun MainAppContent(
             })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             // Голосовая команда: «добавь в список молоко» / «задача вынести мусор»
             Box(
@@ -240,7 +245,7 @@ fun MainAppContent(
                     .size(58.dp)
                     .clip(CircleShape)
                     .background(Brush.linearGradient(AccentGradient))
-                    .clickable { launchVoice() },
+                    .clickable { showVoiceDialog = true },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

@@ -56,6 +56,7 @@ import com.kinly.famapp.features.products.BarcodeLookup
 import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
 import com.kinly.famapp.ui.components.GlassCard
+import com.kinly.famapp.ui.components.emojiForItem
 import com.kinly.famapp.ui.theme.*
 
 /** Русское склонение слова «товар» по числу. */
@@ -374,6 +375,12 @@ fun ShoppingItemRow(
         }
 
         Spacer(modifier = Modifier.width(12.dp))
+
+        val emoji = remember(item.title) { emojiForItem(item.title) }
+        if (emoji != null) {
+            Text(text = emoji, fontSize = 17.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+        }
 
         Column(
             modifier = Modifier.weight(1f).clickable(onClick = onToggle)
