@@ -36,6 +36,7 @@ import com.kinly.famapp.features.auth.GoogleSignInHelper
 import com.kinly.famapp.features.auth.GoogleSignInResult
 import com.kinly.famapp.features.family.FamilyViewModel
 import com.kinly.famapp.features.inventory.InventoryViewModel
+import com.kinly.famapp.features.navstate.TabStateViewModel
 import com.kinly.famapp.features.notifications.NotificationViewModel
 import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
@@ -169,6 +170,17 @@ fun MainAppContent(
     val currentRoute = currentBackStackEntry?.destination?.route
     val familyId = profile.activeFamilyId ?: return
 
+    // Последняя открытая вкладка (восстанавливается после выгрузки процесса).
+    val tabStateViewModel: TabStateViewModel = hiltViewModel()
+    val lastTab by tabStateViewModel.lastTab.collectAsState()
+    // Ждём, пока подтянется сохранённая вкладка, чтобы NavHost стартовал с неё.
+    val startRoute = lastTab ?: run {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Primary)
+        }
+        return
+    }
+
     val tasksViewModel: TasksViewModel = hiltViewModel()
     val shoppingViewModel: ShoppingViewModel = hiltViewModel()
     val familyViewModel: FamilyViewModel = hiltViewModel()
@@ -242,6 +254,8 @@ fun MainAppContent(
             BottomNavBar(
                 currentRoute = currentRoute,
                 onItemSelected = { route ->
+                    // Запоминаем выбранную вкладку для восстановления после перезапуска.
+                    tabStateViewModel.saveTab(route)
                     // Если открыт не-табовый экран (уведомления/профиль) — убираем его без
                     // сохранения, чтобы при возврате на вкладку он не всплывал снова.
                     if (currentRoute == Screen.Notifications.route || currentRoute == Screen.Profile.route) {
@@ -260,7 +274,7 @@ fun MainAppContent(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = startRoute,
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screen.Home.route) {
