@@ -77,6 +77,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
     val uiState by viewModel.uiState.collectAsState()
     var showCreateList by remember { mutableStateOf(false) }
     var showListMenu by remember { mutableStateOf(false) }
+    var deletingList by remember { mutableStateOf<ShoppingList?>(null) }
 
     val currentList = uiState.currentList
     val items = currentList?.let { uiState.itemsByList[it.id] } ?: emptyList()
@@ -114,7 +115,8 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                 expanded = showListMenu,
                 onExpandedChange = { showListMenu = it },
                 onSelect = { viewModel.selectList(it); showListMenu = false },
-                onCreateNew = { showListMenu = false; showCreateList = true }
+                onCreateNew = { showListMenu = false; showCreateList = true },
+                onDelete = { deletingList = it }
             )
             Spacer(modifier = Modifier.height(14.dp))
         }
@@ -210,6 +212,28 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
             onConfirm = { name ->
                 viewModel.createList(name)
                 showCreateList = false
+            }
+        )
+    }
+
+    deletingList?.let { list ->
+        AlertDialog(
+            onDismissRequest = { deletingList = null },
+            containerColor = Color(0xFF1D2538),
+            title = { Text("Удалить список?", color = OnSurface) },
+            text = { Text("«${list.title}» и все его товары будут удалены безвозвратно.", color = OnSurfaceVariant) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteList(list.id)
+                    deletingList = null
+                }) {
+                    Text("Удалить", color = Secondary, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingList = null }) {
+                    Text("Отмена", color = OnSurfaceVariant)
+                }
             }
         )
     }
@@ -617,7 +641,8 @@ fun ShoppingListSelector(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onSelect: (String) -> Unit,
-    onCreateNew: () -> Unit
+    onCreateNew: () -> Unit,
+    onDelete: (ShoppingList) -> Unit = {}
 ) {
     Box {
         Row(
@@ -641,7 +666,12 @@ fun ShoppingListSelector(
             lists.forEach { list ->
                 DropdownMenuItem(
                     text = { Text(list.title, color = if (list.id == currentList?.id) Primary else OnSurface) },
-                    onClick = { onSelect(list.id) }
+                    onClick = { onSelect(list.id) },
+                    trailingIcon = {
+                        IconButton(onClick = { onExpandedChange(false); onDelete(list) }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Outlined.DeleteOutline, contentDescription = "Удалить список", tint = Outline, modifier = Modifier.size(18.dp))
+                        }
+                    }
                 )
             }
             HorizontalDivider(color = Color(0x1AFFFFFF))

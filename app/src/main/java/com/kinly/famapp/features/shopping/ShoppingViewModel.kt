@@ -187,4 +187,22 @@ class ShoppingViewModel @Inject constructor(
             }
         }
     }
+
+    /** Удаление списка покупок вместе с его товарами. */
+    fun deleteList(listId: String) {
+        val remaining = _uiState.value.lists.filterNot { it.id == listId }
+        val newCurrent = if (_uiState.value.currentList?.id == listId) remaining.firstOrNull()
+                         else _uiState.value.currentList
+        val newItems = _uiState.value.items.filterNot { it.listId == listId }
+        _uiState.value = _uiState.value.copy(
+            lists = remaining,
+            currentList = newCurrent,
+            items = newItems,
+            itemsByList = newItems.groupBy { it.listId }
+        )
+        viewModelScope.launch {
+            shoppingRepository.deleteList(listId)
+            refreshItems()
+        }
+    }
 }

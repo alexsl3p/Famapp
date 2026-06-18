@@ -96,6 +96,14 @@ class ShoppingRepository @Inject constructor(private val supabase: SupabaseClien
         }
     }
 
+    suspend fun deleteList(listId: String) {
+        runCatching {
+            // Сначала товары списка, затем сам список (на случай отсутствия каскада).
+            supabase.postgrest["shopping_items"].delete { filter { eq("list_id", listId) } }
+            supabase.postgrest["shopping_lists"].delete { filter { eq("id", listId) } }
+        }
+    }
+
     suspend fun createList(familyId: String, title: String): ShoppingList {
         val userId = supabase.auth.currentUserOrNull()?.id ?: throw Exception("Not authenticated")
         return supabase.postgrest["shopping_lists"].insert(

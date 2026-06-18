@@ -1,6 +1,6 @@
 {
-  "versionCode": 7,
-  "versionName": "1.6",
+  "versionCode": 8,
+  "versionName": "1.7",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Элегантные темы шрифтов (Marck Script + Montserrat / Playfair + Inter) с кириллицей; «Элегант» по умолчанию."
+  "notes": "Удаление списков покупок и другие улучшения."
 }
