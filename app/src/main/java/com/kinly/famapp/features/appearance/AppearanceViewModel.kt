@@ -22,8 +22,8 @@ class AppearanceViewModel @Inject constructor(
 ) : ViewModel() {
 
     val fontThemeId: StateFlow<String> = dataStore.data
-        .map { it[FONT_THEME_KEY] ?: "cosmo" }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, "cosmo")
+        .map { it[FONT_THEME_KEY] ?: "signature" }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "signature")
 
     fun setFontTheme(id: String) {
         viewModelScope.launch {

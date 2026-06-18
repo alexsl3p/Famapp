@@ -51,6 +51,15 @@ val Inter = FontFamily(
     Font(R.font.inter_bold, FontWeight.ExtraBold),
 )
 
+/** Montserrat — геометрический гротеск (аналог Poppins) с кириллицей. */
+val Montserrat = FontFamily(
+    Font(R.font.montserrat_medium, FontWeight.Normal),
+    Font(R.font.montserrat_medium, FontWeight.Medium),
+    Font(R.font.montserrat_semibold, FontWeight.SemiBold),
+    Font(R.font.montserrat_bold, FontWeight.Bold),
+    Font(R.font.montserrat_bold, FontWeight.ExtraBold),
+)
+
 /** Comfortaa — округлый геометрический, с кириллицей. */
 val Comfortaa = FontFamily(
     Font(R.font.comfortaa_semibold, FontWeight.Normal),
@@ -60,11 +69,11 @@ val Comfortaa = FontFamily(
     Font(R.font.comfortaa_bold, FontWeight.ExtraBold),
 )
 
+/** Marck Script — элегантный связный курсив, с кириллицей (акцент на имени). */
+val MarckScript = FontFamily(Font(R.font.marckscript_regular, FontWeight.Normal))
+
 /** Caveat — рукописный, с кириллицей (акцент на имени). */
 val Caveat = FontFamily(Font(R.font.caveat_bold, FontWeight.Bold))
-
-/** Pacifico — каллиграфический скрипт, с кириллицей (акцент на имени). */
-val Pacifico = FontFamily(Font(R.font.pacifico_regular, FontWeight.Normal))
 
 /**
  * Тема шрифтов:
@@ -82,12 +91,12 @@ data class FontTheme(
 )
 
 val FontThemes = listOf(
-    FontTheme("cosmo", "Тема 1 · Космо", "Unbounded + Manrope", Unbounded, Unbounded, Manrope),
-    FontTheme("clean", "Тема 2 · Чистая", "Manrope", Manrope, Manrope, Manrope),
-    FontTheme("geo", "Тема 3 · Гео", "Onest", Onest, Onest, Onest),
-    FontTheme("elegant", "Тема 4 · Элегант", "Playfair + Manrope", Playfair, Playfair, Manrope),
-    FontTheme("grace", "Тема 5 · Грация", "Caveat + Comfortaa + Inter", Caveat, Comfortaa, Inter),
-    FontTheme("romance", "Тема 6 · Романс", "Pacifico + Playfair + Inter", Pacifico, Playfair, Inter),
+    FontTheme("signature", "Тема 1 · Элегант", "Marck Script + Montserrat + Inter", MarckScript, Montserrat, Inter),
+    FontTheme("romance", "Тема 2 · Романс", "Marck Script + Playfair + Inter", MarckScript, Playfair, Inter),
+    FontTheme("cosmo", "Тема 3 · Космо", "Unbounded + Manrope", Unbounded, Unbounded, Manrope),
+    FontTheme("clean", "Тема 4 · Чистая", "Manrope", Manrope, Manrope, Manrope),
+    FontTheme("geo", "Тема 5 · Гео", "Onest", Onest, Onest, Onest),
+    FontTheme("grace", "Тема 6 · Грация", "Caveat + Comfortaa + Inter", Caveat, Comfortaa, Inter),
 )
 
 fun fontThemeById(id: String?): FontTheme = FontThemes.firstOrNull { it.id == id } ?: FontThemes.first()

@@ -19,19 +19,19 @@ fun appTypography(theme: FontTheme): Typography {
             fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-0.5).sp
         ),
         headlineMedium = TextStyle(
-            fontFamily = body, fontWeight = FontWeight.Bold,
+            fontFamily = display, fontWeight = FontWeight.Bold,
             fontSize = 24.sp, lineHeight = 31.sp
         ),
         headlineSmall = TextStyle(
-            fontFamily = body, fontWeight = FontWeight.Bold,
+            fontFamily = display, fontWeight = FontWeight.Bold,
             fontSize = 23.sp, lineHeight = 29.sp
         ),
         titleLarge = TextStyle(
-            fontFamily = body, fontWeight = FontWeight.SemiBold,
+            fontFamily = display, fontWeight = FontWeight.SemiBold,
             fontSize = 20.sp, lineHeight = 26.sp
         ),
         titleMedium = TextStyle(
-            fontFamily = body, fontWeight = FontWeight.SemiBold,
+            fontFamily = display, fontWeight = FontWeight.SemiBold,
             fontSize = 16.sp, lineHeight = 22.sp
         ),
         bodyLarge = TextStyle(

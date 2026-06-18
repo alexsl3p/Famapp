@@ -1,6 +1,6 @@
 {
-  "versionCode": 6,
-  "versionName": "1.5",
+  "versionCode": 7,
+  "versionName": "1.6",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Экран настроек (вместо колокольчика), выбор темы шрифтов (6 тем, включая каллиграфические), тонкие разделители в статистике."
+  "notes": "Элегантные темы шрифтов (Marck Script + Montserrat / Playfair + Inter) с кириллицей; «Элегант» по умолчанию."
 }
