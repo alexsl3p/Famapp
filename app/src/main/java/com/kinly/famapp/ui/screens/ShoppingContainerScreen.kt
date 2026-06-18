@@ -65,7 +65,14 @@ fun ShoppingContainerScreen(
 
         when (selectedTab) {
             0 -> ShoppingScreen(viewModel = shoppingViewModel, productViewModel = productViewModel)
-            1 -> InventoryScreen(viewModel = inventoryViewModel, products = productUiState.products)
+            1 -> InventoryScreen(
+                viewModel = inventoryViewModel,
+                products = productUiState.products,
+                onAddProduct = { name, qty ->
+                    inventoryViewModel.addItem(name, qty)
+                    productViewModel.reload()
+                }
+            )
             2 -> StatsScreen(viewModel = statsViewModel)
         }
     }

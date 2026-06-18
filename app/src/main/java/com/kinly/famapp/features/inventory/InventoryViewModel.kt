@@ -28,6 +28,7 @@ data class InventoryUiState(
 @HiltViewModel
 class InventoryViewModel @Inject constructor(
     private val inventoryRepository: InventoryRepository,
+    private val productRepository: com.kinly.famapp.features.products.ProductRepository,
     private val supabase: SupabaseClient
 ) : ViewModel() {
 
@@ -78,6 +79,30 @@ class InventoryViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { inventoryRepository.updateQuantity(itemId, quantity) }
                 .onFailure { refreshItems() }
+        }
+    }
+
+    /** Удаление позиции инвентаря. */
+    fun deleteItem(itemId: String) {
+        _uiState.value = _uiState.value.copy(items = _uiState.value.items.filterNot { it.id == itemId })
+        viewModelScope.launch {
+            runCatching { inventoryRepository.deleteItem(itemId) }.onFailure { refreshItems() }
+        }
+    }
+
+    /** Добавление продукта в инвентарь по названию (создаёт продукт, если его ещё нет). */
+    fun addItem(name: String, quantity: Double = 1.0) {
+        val familyId = currentFamilyId ?: return
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            runCatching {
+                val existing = productRepository.findByName(familyId, trimmed)
+                    .firstOrNull { it.name.equals(trimmed, ignoreCase = true) }
+                val product = existing ?: productRepository.createProduct(familyId, trimmed, source = "manual")
+                inventoryRepository.upsertItem(familyId, product.id, quantityAdd = quantity)
+                refreshItems()
+            }.onFailure { _uiState.value = _uiState.value.copy(error = it.message) }
         }
     }
 

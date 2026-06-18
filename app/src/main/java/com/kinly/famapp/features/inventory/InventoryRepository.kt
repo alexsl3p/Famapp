@@ -57,6 +57,12 @@ class InventoryRepository @Inject constructor(private val supabase: SupabaseClie
         )
     }
 
+    suspend fun deleteItem(itemId: String) {
+        runCatching {
+            supabase.postgrest["inventory_items"].delete { filter { eq("id", itemId) } }
+        }
+    }
+
     suspend fun createLocation(familyId: String, name: String, icon: String? = null): InventoryLocation =
         supabase.postgrest["inventory_locations"].insert(
             buildJsonObject {

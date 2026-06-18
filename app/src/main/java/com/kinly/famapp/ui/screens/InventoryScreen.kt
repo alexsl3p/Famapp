@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Add
@@ -17,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,10 +33,12 @@ import com.kinly.famapp.ui.theme.*
 @Composable
 fun InventoryScreen(
     viewModel: InventoryViewModel,
-    products: List<Product>
+    products: List<Product>,
+    onAddProduct: (String, Double) -> Unit = { _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val productsMap = remember(products) { products.associateBy { it.id } }
+    var showAddDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -52,8 +56,25 @@ fun InventoryScreen(
             text = "Текущие остатки дома",
             style = MaterialTheme.typography.bodyMedium,
             color = OnSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+            modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
         )
+
+        // Кнопка добавления продукта
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Brush.linearGradient(AccentGradient))
+                .clickable { showAddDialog = true }
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Outlined.Add, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Добавить продукт", color = Color(0xFF0B1326), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        }
+        Spacer(Modifier.height(20.dp))
 
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -94,13 +115,82 @@ fun InventoryScreen(
                         status = status,
                         items = group,
                         productsMap = productsMap,
-                        onQuantityChange = { itemId, qty -> viewModel.updateQuantity(itemId, qty) }
+                        onQuantityChange = { itemId, qty -> viewModel.updateQuantity(itemId, qty) },
+                        onDelete = { itemId -> viewModel.deleteItem(itemId) }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
+
+    if (showAddDialog) {
+        AddInventoryDialog(
+            onDismissRequest = { showAddDialog = false },
+            onConfirm = { name, qty ->
+                onAddProduct(name, qty)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun AddInventoryDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: (String, Double) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var qty by remember { mutableIntStateOf(1) }
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        containerColor = Color(0xFF1D2538),
+        title = { Text("Добавить продукт", color = OnSurface) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Название", color = Outline) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Primary,
+                        unfocusedBorderColor = Outline,
+                        focusedTextColor = OnSurface,
+                        unfocusedTextColor = OnSurface,
+                        cursorColor = Primary
+                    )
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Количество", color = OnSurfaceVariant, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier.size(32.dp).clip(CircleShape).background(Color(0x1AFFFFFF))
+                            .border(1.dp, Color(0x33FFFFFF), CircleShape)
+                            .clickable { if (qty > 1) qty-- },
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Outlined.Remove, null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp)) }
+                    Text("$qty", color = OnSurface, fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
+                        modifier = Modifier.widthIn(min = 32.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Box(
+                        modifier = Modifier.size(32.dp).clip(CircleShape).background(Primary.copy(alpha = 0.15f))
+                            .border(1.dp, Primary.copy(alpha = 0.3f), CircleShape)
+                            .clickable { qty++ },
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Outlined.Add, null, tint = Primary, modifier = Modifier.size(16.dp)) }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim(), qty.toDouble()) }) {
+                Text("Добавить", color = Primary, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) { Text("Отмена", color = OnSurfaceVariant) }
+        }
+    )
 }
 
 @Composable
@@ -108,7 +198,8 @@ private fun InventoryStatusSection(
     status: InventoryStatus,
     items: List<InventoryItem>,
     productsMap: Map<String, Product>,
-    onQuantityChange: (String, Double) -> Unit
+    onQuantityChange: (String, Double) -> Unit,
+    onDelete: (String) -> Unit
 ) {
     val accentColor = when (status) {
         InventoryStatus.OUT -> Color(0xFFEF4444)
@@ -150,7 +241,8 @@ private fun InventoryStatusSection(
                     productName = product?.name ?: "Продукт",
                     productBrand = product?.brand,
                     statusColor = accentColor,
-                    onQuantityChange = onQuantityChange
+                    onQuantityChange = onQuantityChange,
+                    onDelete = { onDelete(item.id) }
                 )
                 if (index < items.size - 1) {
                     Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
@@ -166,7 +258,8 @@ private fun InventoryItemRow(
     productName: String,
     productBrand: String?,
     statusColor: Color,
-    onQuantityChange: (String, Double) -> Unit
+    onQuantityChange: (String, Double) -> Unit,
+    onDelete: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -235,6 +328,16 @@ private fun InventoryItemRow(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(imageVector = Icons.Outlined.Add, contentDescription = "Увеличить", tint = Primary, modifier = Modifier.size(14.dp))
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .clickable { onDelete() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = Icons.Outlined.DeleteOutline, contentDescription = "Удалить", tint = Outline, modifier = Modifier.size(16.dp))
             }
         }
     }
