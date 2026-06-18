@@ -166,10 +166,10 @@ private fun NotificationSettingsCard(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
-            SettingRow("🛒 Новые товары в списке", settings.shopping, onShopping)
-            SettingRow("📌 Назначенные мне задачи", settings.assigned, onAssigned)
-            SettingRow("🆕 Новые задачи в семье", settings.created, onCreated)
-            SettingRow("✅ Выполненные задачи", settings.completed, onCompleted)
+            SettingRow("Новые товары в списке", settings.shopping, onShopping)
+            SettingRow("Назначенные мне задачи", settings.assigned, onAssigned)
+            SettingRow("Новые задачи в семье", settings.created, onCreated)
+            SettingRow("Выполненные задачи", settings.completed, onCompleted)
         }
     }
 }

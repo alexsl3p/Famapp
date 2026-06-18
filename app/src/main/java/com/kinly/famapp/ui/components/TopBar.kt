@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.kinly.famapp.ui.theme.ClashDisplay
 import com.kinly.famapp.ui.theme.Primary
 
 @Composable
@@ -75,6 +76,7 @@ fun KinlyTopBar(
         Text(
             text = "Family OS",
             color = Primary,
+            fontFamily = ClashDisplay,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = (-0.5).sp

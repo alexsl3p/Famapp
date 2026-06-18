@@ -242,6 +242,11 @@ fun MainAppContent(
             BottomNavBar(
                 currentRoute = currentRoute,
                 onItemSelected = { route ->
+                    // Если открыт не-табовый экран (уведомления/профиль) — убираем его без
+                    // сохранения, чтобы при возврате на вкладку он не всплывал снова.
+                    if (currentRoute == Screen.Notifications.route || currentRoute == Screen.Profile.route) {
+                        navController.popBackStack()
+                    }
                     navController.navigate(route) {
                         popUpTo(navController.graph.startDestinationId) { saveState = true }
                         launchSingleTop = true
