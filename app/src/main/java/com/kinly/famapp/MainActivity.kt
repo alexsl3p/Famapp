@@ -177,15 +177,19 @@ fun MainAppContent(
                 is VoiceCommand.AddShopping -> {
                     val listId = shoppingUiState.currentList?.id ?: shoppingUiState.lists.firstOrNull()?.id
                     if (listId != null) {
-                        shoppingViewModel.addItem(listId, cmd.title)
-                        voiceScope.launch { snackbarHostState.showSnackbar("🛒 В список: ${cmd.title}") }
+                        cmd.titles.forEach { shoppingViewModel.addItem(listId, it) }
+                        val msg = if (cmd.titles.size == 1) "🛒 В список: ${cmd.titles.first()}"
+                                  else "🛒 Добавлено (${cmd.titles.size}): ${cmd.titles.joinToString(", ")}"
+                        voiceScope.launch { snackbarHostState.showSnackbar(msg) }
                     } else {
                         voiceScope.launch { snackbarHostState.showSnackbar("Сначала создайте список покупок") }
                     }
                 }
                 is VoiceCommand.AddTask -> {
-                    tasksViewModel.createTask(title = cmd.title)
-                    voiceScope.launch { snackbarHostState.showSnackbar("✅ Задача: ${cmd.title}") }
+                    cmd.titles.forEach { tasksViewModel.createTask(title = it) }
+                    val msg = if (cmd.titles.size == 1) "✅ Задача: ${cmd.titles.first()}"
+                              else "✅ Задачи (${cmd.titles.size}): ${cmd.titles.joinToString(", ")}"
+                    voiceScope.launch { snackbarHostState.showSnackbar(msg) }
                 }
                 is VoiceCommand.Unknown -> {
                     voiceScope.launch { snackbarHostState.showSnackbar("Не понял: «${cmd.raw}». Скажите «добавь…» или «задача…»") }

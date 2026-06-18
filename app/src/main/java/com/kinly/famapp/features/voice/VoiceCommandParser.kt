@@ -2,17 +2,20 @@ package com.kinly.famapp.features.voice
 
 /** Результат разбора голосовой команды. */
 sealed class VoiceCommand {
-    data class AddShopping(val title: String) : VoiceCommand()
-    data class AddTask(val title: String) : VoiceCommand()
+    /** Один или несколько товаров за раз. */
+    data class AddShopping(val titles: List<String>) : VoiceCommand()
+    /** Одна или несколько задач за раз. */
+    data class AddTask(val titles: List<String>) : VoiceCommand()
     data class Unknown(val raw: String) : VoiceCommand()
 }
 
 /**
  * Простой разбор русских голосовых команд:
- *   «добавь в список покупок яйца»  → AddShopping("Яйца")
- *   «купить молоко»                  → AddShopping("Молоко")
- *   «добавь задачу вынести мусор»    → AddTask("Вынести мусор")
- *   «напомни полить цветы»           → AddTask("Полить цветы")
+ *   «добавь в список молоко хлеб яйца»       → AddShopping([Молоко, Хлеб, Яйца])
+ *   «купить молоко и хлеб»                    → AddShopping([Молоко, Хлеб])
+ *   «добавь туалетную бумагу, молоко»         → AddShopping([Туалетную бумагу, Молоко])
+ *   «добавь задачу вынести мусор»             → AddTask([Вынести мусор])
+ *   «задачи вынести мусор, помыть посуду»     → AddTask([Вынести мусор, Помыть посуду])
  */
 object VoiceCommandParser {
 
@@ -32,27 +35,51 @@ object VoiceCommandParser {
     private val taskTriggers = listOf("задач", "задани", "напомни", "сделать")
     private val shoppingTriggers = listOf("список", "покупк", "покупо", "купить", "купи", "куплю", "магазин")
 
+    // Явные разделители перечисления: запятая, «и», «да», плюс, перенос строки.
+    private val strongSeparators = Regex("\\s*[,;+\\n]\\s*|\\s+и\\s+|\\s+да\\s+")
+
     fun parse(raw: String): VoiceCommand {
         val text = raw.trim()
         if (text.isEmpty()) return VoiceCommand.Unknown(raw)
         val lower = text.lowercase()
 
         return when {
-            taskTriggers.any { lower.contains(it) } ->
-                VoiceCommand.AddTask(capitalize(extractAfter(text, lower, taskAnchors)))
-
-            shoppingTriggers.any { lower.contains(it) } ->
-                VoiceCommand.AddShopping(capitalize(extractAfter(text, lower, shoppingAnchors)))
-
-            else -> VoiceCommand.Unknown(text)
-        }.let { cmd ->
-            // Если после якоря ничего не осталось — считаем команду непонятой.
-            when (cmd) {
-                is VoiceCommand.AddTask -> if (cmd.title.isBlank()) VoiceCommand.Unknown(text) else cmd
-                is VoiceCommand.AddShopping -> if (cmd.title.isBlank()) VoiceCommand.Unknown(text) else cmd
-                else -> cmd
+            taskTriggers.any { lower.contains(it) } -> {
+                val items = splitTaskItems(extractAfter(text, lower, taskAnchors))
+                if (items.isEmpty()) VoiceCommand.Unknown(text) else VoiceCommand.AddTask(items)
             }
+            shoppingTriggers.any { lower.contains(it) } -> {
+                val items = splitShoppingItems(extractAfter(text, lower, shoppingAnchors))
+                if (items.isEmpty()) VoiceCommand.Unknown(text) else VoiceCommand.AddShopping(items)
+            }
+            else -> VoiceCommand.Unknown(text)
         }
+    }
+
+    /**
+     * Покупки: «молоко хлеб яйца» → три товара.
+     * Если есть явные разделители (запятая/«и») — режем по ним (сохраняя составные названия
+     * вроде «туалетная бумага»). Иначе — по пробелам (диктовка простых товаров через паузу).
+     */
+    private fun splitShoppingItems(s: String): List<String> {
+        val text = s.trim()
+        if (text.isEmpty()) return emptyList()
+        val parts = if (strongSeparators.containsMatchIn(text)) {
+            text.split(strongSeparators)
+        } else {
+            text.split(Regex("\\s+"))
+        }
+        return parts.map { capitalize(it) }.filter { it.isNotBlank() }
+    }
+
+    /**
+     * Задачи: режем только по явным разделителям (запятая/«и»), чтобы не ломать
+     * многословные задачи вроде «вынести мусор».
+     */
+    private fun splitTaskItems(s: String): List<String> {
+        val text = s.trim()
+        if (text.isEmpty()) return emptyList()
+        return text.split(strongSeparators).map { capitalize(it) }.filter { it.isNotBlank() }
     }
 
     /** Возвращает текст после первого найденного якоря; если якоря нет — убирает вводные слова. */
