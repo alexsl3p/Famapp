@@ -41,12 +41,14 @@ import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
 import com.kinly.famapp.features.stats.StatsViewModel
 import com.kinly.famapp.features.tasks.TasksViewModel
+import com.kinly.famapp.features.update.UpdateViewModel
 import com.kinly.famapp.navigation.Screen
 import com.kinly.famapp.navigation.bottomNavItems
 import com.kinly.famapp.features.voice.VoiceCommand
 import com.kinly.famapp.features.voice.VoiceCommandParser
 import com.kinly.famapp.ui.components.KinlyTopBar
 import com.kinly.famapp.ui.components.MeshBackground
+import com.kinly.famapp.ui.components.UpdateDialog
 import com.kinly.famapp.ui.components.VoiceDictationDialog
 import com.kinly.famapp.ui.screens.*
 import com.kinly.famapp.ui.theme.AccentGradient
@@ -77,6 +79,16 @@ fun KinlyApp() {
     val signInError by authViewModel.signInError.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Проверка обновлений (само-обновление через Supabase Storage)
+    val updateViewModel: UpdateViewModel = hiltViewModel()
+    val updateState by updateViewModel.state.collectAsState()
+    LaunchedEffect(Unit) { updateViewModel.checkForUpdate() }
+    UpdateDialog(
+        state = updateState,
+        onUpdate = { updateViewModel.startUpdate(context) },
+        onDismiss = { updateViewModel.dismiss() }
+    )
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
