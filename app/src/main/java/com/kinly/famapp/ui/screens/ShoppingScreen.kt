@@ -225,11 +225,12 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
     var adding by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var qty by remember { mutableIntStateOf(1) }
+    var hasFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
     if (!adding) {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable { adding = true }.padding(horizontal = 14.dp, vertical = 11.dp),
+            modifier = Modifier.fillMaxWidth().clickable { hasFocused = false; adding = true }.padding(horizontal = 14.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -282,9 +283,11 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
                     .weight(1f)
                     .focusRequester(focusRequester)
                     .onFocusChanged { state ->
-                        // Потеряли фокус (тапнули в другое место):
-                        //   есть текст → сохраняем, пусто → просто убираем черновик.
-                        if (!state.isFocused) {
+                        // Ждём, пока поле реально получит фокус; только потом реагируем на его потерю,
+                        // иначе строка закрывается сразу при появлении (первый колбэк — unfocused).
+                        if (state.isFocused) {
+                            hasFocused = true
+                        } else if (hasFocused) {
                             if (name.isNotBlank()) {
                                 onAdd(name.trim(), qty.toString())
                                 name = ""; qty = 1

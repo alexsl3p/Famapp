@@ -27,10 +27,10 @@ fun GlassCard(
     val shape = RoundedCornerShape(16.dp)
     Box(
         modifier = modifier
-            .shadow(elevation = 10.dp, shape = shape, clip = false, spotColor = Color(0xB3000000), ambientColor = Color(0x80000000))
+            .shadow(elevation = 10.dp, shape = shape, clip = false, spotColor = Color(0x66000000), ambientColor = Color(0x4D000000))
             .clip(shape)
-            // Полупрозрачный тёмно-фиолетовый «стекло»-тон — фон просвечивает сквозь карточку
-            .background(Color(0x7A1B1640))
+            // Лёгкий тёмно-фиолетовый «стекло»-тон — фон хорошо просвечивает сквозь карточку
+            .background(Color(0x401B1640))
             .border(
                 BorderStroke(
                     1.dp,
