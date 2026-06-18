@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kinly.famapp.ui.theme.DisplaySans
 import com.kinly.famapp.ui.theme.OnSurface
 import com.kinly.famapp.ui.theme.OnSurfaceVariant
 import com.kinly.famapp.ui.theme.Primary
@@ -34,11 +35,13 @@ fun WelcomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Kinly",
+            text = "Family OS",
             color = Primary,
-            fontSize = 56.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = (-1).sp,
+            fontFamily = DisplaySans,
+            fontSize = 38.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.5).sp,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Text(
