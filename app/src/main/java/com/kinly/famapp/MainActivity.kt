@@ -10,12 +10,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material3.FabPosition
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -227,35 +227,19 @@ fun MainAppContent(
             )
         },
         bottomBar = {
-            BottomNavBar(currentRoute = currentRoute, onItemSelected = { route ->
-                navController.navigate(route) {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            })
+            BottomNavBar(
+                currentRoute = currentRoute,
+                onItemSelected = { route ->
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onVoiceClick = { showVoiceDialog = true }
+            )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButtonPosition = FabPosition.Center,
-        floatingActionButton = {
-            // Голосовая команда: «добавь в список молоко» / «задача вынести мусор»
-            Box(
-                modifier = Modifier
-                    .padding(bottom = 6.dp)
-                    .size(58.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(AccentGradient))
-                    .clickable { showVoiceDialog = true },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Filled.Mic,
-                    contentDescription = "Голосовая команда",
-                    tint = Color(0xFF0B1326),
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-        }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         NavHost(
             navController = navController,
@@ -322,7 +306,11 @@ fun MainAppContent(
 }
 
 @Composable
-fun BottomNavBar(currentRoute: String?, onItemSelected: (String) -> Unit) {
+fun BottomNavBar(
+    currentRoute: String?,
+    onItemSelected: (String) -> Unit,
+    onVoiceClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -331,35 +319,81 @@ fun BottomNavBar(currentRoute: String?, onItemSelected: (String) -> Unit) {
             .clip(RoundedCornerShape(30.dp))
             .background(Color(0xCC0B1326))
             .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(30.dp))
+            .padding(vertical = 8.dp)
     ) {
-        NavigationBar(
-            containerColor = Color.Transparent,
-            contentColor = Primary,
-            tonalElevation = 0.dp,
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            bottomNavItems.forEach { item ->
-                val isSelected = currentRoute == item.route
-                NavigationBarItem(
-                    selected = isSelected,
-                    onClick = { onItemSelected(item.route) },
-                    icon = {
-                        Icon(
-                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                            contentDescription = item.label,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    label = { Text(item.label, style = MaterialTheme.typography.labelMedium) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF0B1326),
-                        selectedTextColor = Primary,
-                        unselectedIconColor = Color(0xFF9090A0),
-                        unselectedTextColor = Color(0xFF9090A0),
-                        indicatorColor = Primary
+            // Первые две вкладки
+            bottomNavItems.take(2).forEach { item ->
+                NavCell(item, currentRoute == item.route) { onItemSelected(item.route) }
+            }
+
+            // Центральная круглая кнопка-микрофон
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(AccentGradient))
+                        .border(3.dp, Color(0xCC0B1326), CircleShape)
+                        .clickable { onVoiceClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Mic,
+                        contentDescription = "Голосовая команда",
+                        tint = Color(0xFF0B1326),
+                        modifier = Modifier.size(26.dp)
                     )
-                )
+                }
+            }
+
+            // Последние две вкладки
+            bottomNavItems.drop(2).forEach { item ->
+                NavCell(item, currentRoute == item.route) { onItemSelected(item.route) }
             }
         }
+    }
+}
+
+@Composable
+private fun RowScope.NavCell(
+    item: com.kinly.famapp.navigation.BottomNavItem,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
+            .padding(vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 46.dp, height = 30.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(if (selected) Primary else Color.Transparent),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                contentDescription = item.label,
+                tint = if (selected) Color(0xFF0B1326) else Color(0xFF9090A0),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(
+            item.label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) Primary else Color(0xFF9090A0)
+        )
     }
 }
