@@ -38,14 +38,19 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun FamAppTheme(content: @Composable () -> Unit) {
+fun FamAppTheme(
+    fontThemeId: String? = null,
+    content: @Composable () -> Unit
+) {
+    val theme = fontThemeById(fontThemeId)
     MaterialTheme(
         colorScheme = DarkColorScheme,
-        typography = Typography
+        typography = appTypography(theme)
     ) {
-        // Шрифт по умолчанию для всех Text без явного fontFamily — Manrope.
         CompositionLocalProvider(
-            LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = BodySans),
+            LocalAppFonts provides theme,
+            // Шрифт по умолчанию для всех Text без явного fontFamily — основной шрифт темы.
+            LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = theme.body),
             content = content
         )
     }

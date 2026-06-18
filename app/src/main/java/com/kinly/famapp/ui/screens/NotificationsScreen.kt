@@ -39,7 +39,6 @@ fun NotificationsScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-    var showSettings by remember { mutableStateOf(false) }
 
     // Открыли экран — помечаем всё прочитанным (бейдж гаснет).
     LaunchedEffect(Unit) { viewModel.markAllRead() }
@@ -62,24 +61,6 @@ fun NotificationsScreen(
                     Text("Очистить", color = OnSurfaceVariant, fontSize = 13.sp)
                 }
             }
-            IconButton(onClick = { showSettings = !showSettings }) {
-                Icon(
-                    Icons.Outlined.Settings,
-                    contentDescription = "Настройки уведомлений",
-                    tint = if (showSettings) Primary else OnSurfaceVariant
-                )
-            }
-        }
-
-        if (showSettings) {
-            NotificationSettingsCard(
-                settings = state.settings,
-                onShopping = viewModel::setShopping,
-                onAssigned = viewModel::setAssigned,
-                onCreated = viewModel::setCreated,
-                onCompleted = viewModel::setCompleted
-            )
-            Spacer(Modifier.height(14.dp))
         }
 
         if (state.notifications.isEmpty()) {
@@ -146,51 +127,6 @@ private fun NotificationRow(n: Notification) {
                 Text(formatNotifTime(n.createdAt), color = Outline, fontSize = 11.sp)
             }
         }
-    }
-}
-
-@Composable
-private fun NotificationSettingsCard(
-    settings: NotificationSettings,
-    onShopping: (Boolean) -> Unit,
-    onAssigned: (Boolean) -> Unit,
-    onCreated: (Boolean) -> Unit,
-    onCompleted: (Boolean) -> Unit
-) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            Text(
-                "Какие уведомления получать",
-                color = OnSurfaceVariant,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            SettingRow("Новые товары в списке", settings.shopping, onShopping)
-            SettingRow("Назначенные мне задачи", settings.assigned, onAssigned)
-            SettingRow("Новые задачи в семье", settings.created, onCreated)
-            SettingRow("Выполненные задачи", settings.completed, onCompleted)
-        }
-    }
-}
-
-@Composable
-private fun SettingRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = OnSurface, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Switch(
-            checked = checked,
-            onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color(0xFF0B1326),
-                checkedTrackColor = Primary,
-                uncheckedThumbColor = Outline,
-                uncheckedTrackColor = Color(0x14FFFFFF)
-            )
-        )
     }
 }
 

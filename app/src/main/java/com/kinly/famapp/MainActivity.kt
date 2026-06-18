@@ -33,6 +33,7 @@ import androidx.navigation.compose.rememberNavController
 import com.kinly.famapp.features.auth.AuthState
 import com.kinly.famapp.features.auth.AuthViewModel
 import com.kinly.famapp.features.auth.GoogleSignInHelper
+import com.kinly.famapp.features.appearance.AppearanceViewModel
 import com.kinly.famapp.features.auth.GoogleSignInResult
 import com.kinly.famapp.features.family.FamilyViewModel
 import com.kinly.famapp.features.inventory.InventoryViewModel
@@ -65,7 +66,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FamAppTheme {
+            val appearanceViewModel: AppearanceViewModel = hiltViewModel()
+            val fontThemeId by appearanceViewModel.fontThemeId.collectAsState()
+            FamAppTheme(fontThemeId = fontThemeId) {
                 KinlyApp()
             }
         }
@@ -188,6 +191,7 @@ fun MainAppContent(
     val inventoryViewModel: InventoryViewModel = hiltViewModel()
     val statsViewModel: StatsViewModel = hiltViewModel()
     val notificationViewModel: NotificationViewModel = hiltViewModel()
+    val appearanceViewModel: AppearanceViewModel = hiltViewModel()
 
     val familyUiState by familyViewModel.uiState.collectAsState()
     val notificationState by notificationViewModel.uiState.collectAsState()
@@ -247,7 +251,7 @@ fun MainAppContent(
                 avatarUrl = profile.avatarUrl,
                 unreadCount = notificationState.unreadCount,
                 onAvatarClick = { navController.navigate(Screen.Profile.route) },
-                onBellClick = { navController.navigate(Screen.Notifications.route) }
+                onSettingsClick = { navController.navigate(Screen.Settings.route) }
             )
         },
         bottomBar = {
@@ -258,7 +262,10 @@ fun MainAppContent(
                     tabStateViewModel.saveTab(route)
                     // Если открыт не-табовый экран (уведомления/профиль) — убираем его без
                     // сохранения, чтобы при возврате на вкладку он не всплывал снова.
-                    if (currentRoute == Screen.Notifications.route || currentRoute == Screen.Profile.route) {
+                    if (currentRoute == Screen.Notifications.route ||
+                        currentRoute == Screen.Profile.route ||
+                        currentRoute == Screen.Settings.route
+                    ) {
                         navController.popBackStack()
                     }
                     navController.navigate(route) {
@@ -330,6 +337,14 @@ fun MainAppContent(
                 NotificationsScreen(
                     viewModel = notificationViewModel,
                     onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    notificationViewModel = notificationViewModel,
+                    appearanceViewModel = appearanceViewModel,
+                    onBack = { navController.popBackStack() },
+                    onOpenNotifications = { navController.navigate(Screen.Notifications.route) }
                 )
             }
         }

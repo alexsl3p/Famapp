@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.kinly.famapp.ui.theme.DisplaySans
+import com.kinly.famapp.ui.theme.LocalAppFonts
 import com.kinly.famapp.ui.theme.Primary
 
 @Composable
@@ -31,7 +31,7 @@ fun KinlyTopBar(
     avatarUrl: String? = null,
     unreadCount: Int = 0,
     onAvatarClick: () -> Unit = {},
-    onBellClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {}
 ) {
     Row(
         modifier = modifier
@@ -76,18 +76,18 @@ fun KinlyTopBar(
         Text(
             text = "Family OS",
             color = Primary,
-            fontFamily = DisplaySans,
+            fontFamily = LocalAppFonts.current.display,
             fontSize = 19.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = (-0.3).sp
         )
 
-        // Notification bell с бейджем непрочитанных
-        IconButton(onClick = onBellClick) {
+        // Кнопка настроек с бейджем непрочитанных уведомлений
+        IconButton(onClick = onSettingsClick) {
             Box(contentAlignment = Alignment.TopEnd) {
                 Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Уведомления",
+                    imageVector = Icons.Outlined.Settings,
+                    contentDescription = "Настройки",
                     tint = Primary,
                     modifier = Modifier.size(24.dp)
                 )

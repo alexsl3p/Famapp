@@ -72,20 +72,21 @@ fun HomeScreen(
                 else -> "Доброй ночи"
             }
         }
-        // Приветствие — двумя шрифтами: «Добрый вечер» (Manrope) + имя акцентом (Unbounded).
+        // Приветствие — двумя шрифтами темы: «Добрый вечер» (body) + имя каллиграфическим акцентом.
+        val fonts = LocalAppFonts.current
         if (userName.isNotBlank()) {
             Text(
                 text = "$greeting,",
-                fontFamily = BodySans,
+                fontFamily = fonts.body,
                 fontWeight = FontWeight.Medium,
                 fontSize = 18.sp,
                 color = OnSurfaceVariant
             )
             Text(
                 text = userName,
-                fontFamily = DisplaySans,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 28.sp,
+                fontFamily = fonts.accent,
+                fontWeight = FontWeight.Bold,
+                fontSize = 40.sp,
                 letterSpacing = (-0.5).sp,
                 color = Primary,
                 modifier = Modifier.padding(bottom = 6.dp)
@@ -93,7 +94,7 @@ fun HomeScreen(
         } else {
             Text(
                 text = greeting,
-                fontFamily = DisplaySans,
+                fontFamily = fonts.display,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 28.sp,
                 letterSpacing = (-0.5).sp,
@@ -217,48 +218,14 @@ fun HomeScreen(
                 .padding(bottom = 16.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceAround
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "$tasksLeft",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Primary
-                    )
-                    Text(
-                        text = "Осталось задач",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurfaceVariant
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${shoppingState.items.count { !it.isChecked }}",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Secondary
-                    )
-                    Text(
-                        text = "Купить",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurfaceVariant
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${members.size}",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Tertiary
-                    )
-                    Text(
-                        text = "Семья",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurfaceVariant
-                    )
-                }
+                StatCell("$tasksLeft", "Осталось задач", Primary, Modifier.weight(1f))
+                StatDivider()
+                StatCell("${shoppingState.items.count { !it.isChecked }}", "Купить", Secondary, Modifier.weight(1f))
+                StatDivider()
+                StatCell("${members.size}", "Семья", Tertiary, Modifier.weight(1f))
             }
         }
 
@@ -454,4 +421,22 @@ fun HomeScreen(
             }
         }
     }
+}
+
+@Composable
+private fun StatCell(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
+    }
+}
+
+@Composable
+private fun StatDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .fillMaxHeight()
+            .background(Color(0x1FFFFFFF))
+    )
 }

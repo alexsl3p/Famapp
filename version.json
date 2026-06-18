@@ -1,6 +1,6 @@
 {
-  "versionCode": 5,
-  "versionName": "1.4",
+  "versionCode": 6,
+  "versionName": "1.5",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Экран входа переименован в Family OS, фирменный шрифт и мелкие улучшения."
+  "notes": "Экран настроек (вместо колокольчика), выбор темы шрифтов (6 тем, включая каллиграфические), тонкие разделители в статистике."
 }

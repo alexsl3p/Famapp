@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kinly.famapp.ui.theme.DisplaySans
+import com.kinly.famapp.ui.theme.LocalAppFonts
 import com.kinly.famapp.ui.theme.OnSurface
 import com.kinly.famapp.ui.theme.OnSurfaceVariant
 import com.kinly.famapp.ui.theme.Primary
@@ -37,7 +37,7 @@ fun WelcomeScreen(
         Text(
             text = "Family OS",
             color = Primary,
-            fontFamily = DisplaySans,
+            fontFamily = LocalAppFonts.current.display,
             fontSize = 38.sp,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = (-0.5).sp,
