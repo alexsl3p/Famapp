@@ -43,9 +43,9 @@ fun FamAppTheme(content: @Composable () -> Unit) {
         colorScheme = DarkColorScheme,
         typography = Typography
     ) {
-        // Шрифт по умолчанию для всех Text без явного fontFamily — Satoshi.
+        // Шрифт по умолчанию для всех Text без явного fontFamily — Manrope.
         CompositionLocalProvider(
-            LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = Satoshi),
+            LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = BodySans),
             content = content
         )
     }

@@ -72,12 +72,35 @@ fun HomeScreen(
                 else -> "Доброй ночи"
             }
         }
-        Text(
-            text = if (userName.isNotBlank()) "$greeting, $userName!" else "$greeting!",
-            style = MaterialTheme.typography.headlineSmall,
-            color = OnSurface,
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
+        // Приветствие — двумя шрифтами: «Добрый вечер» (Manrope) + имя акцентом (Unbounded).
+        if (userName.isNotBlank()) {
+            Text(
+                text = "$greeting,",
+                fontFamily = BodySans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 18.sp,
+                color = OnSurfaceVariant
+            )
+            Text(
+                text = userName,
+                fontFamily = DisplaySans,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 28.sp,
+                letterSpacing = (-0.5).sp,
+                color = Primary,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+        } else {
+            Text(
+                text = greeting,
+                fontFamily = DisplaySans,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 28.sp,
+                letterSpacing = (-0.5).sp,
+                color = Primary,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+        }
         Text(
             text = "Вот что происходит в вашей семье сегодня.",
             style = MaterialTheme.typography.bodyMedium,
