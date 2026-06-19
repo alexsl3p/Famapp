@@ -1,6 +1,6 @@
 {
-  "versionCode": 12,
-  "versionName": "2.1",
+  "versionCode": 13,
+  "versionName": "2.2",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Задачи: черновик новой задачи не пропадает при сворачивании, автозаглавная буква, фото открывается на весь экран."
+  "notes": "Черновик новой задачи теперь хранится надёжно (переживает выгрузку процесса)."
 }

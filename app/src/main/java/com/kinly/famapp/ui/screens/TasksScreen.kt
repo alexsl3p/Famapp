@@ -49,6 +49,8 @@ import coil.compose.AsyncImage
 import com.kinly.famapp.data.models.FamilyMember
 import com.kinly.famapp.data.models.Task
 import com.kinly.famapp.data.models.TaskComment
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.kinly.famapp.features.tasks.TaskDraftViewModel
 import com.kinly.famapp.features.tasks.TaskFilter
 import com.kinly.famapp.features.tasks.TasksViewModel
 import com.kinly.famapp.ui.components.GlassCard
@@ -68,7 +70,8 @@ fun TasksScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filteredTasks = viewModel.getFilteredTasks()
-    var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    val draftViewModel: TaskDraftViewModel = hiltViewModel()
+    val draft by draftViewModel.draft.collectAsState()
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var deletingTask by remember { mutableStateOf<Task?>(null) }
 
@@ -163,7 +166,7 @@ fun TasksScreen(
                 if (uiState.filter != TaskFilter.COMPLETED) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().clickable { showAddDialog = true }.padding(horizontal = 14.dp, vertical = 14.dp),
+                            modifier = Modifier.fillMaxWidth().clickable { draftViewModel.open() }.padding(horizontal = 14.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
@@ -184,41 +187,72 @@ fun TasksScreen(
         }
     }
 
-    if (showAddDialog) {
+    if (draft.open) {
         AddTaskDialog(
             members = members,
             currentUserId = currentUserId,
-            onDismiss = { showAddDialog = false },
-            onConfirm = { title, dueDate, assignedTo, repeatType, description, isPriority, photoBytes ->
+            isEdit = false,
+            title = draft.title,
+            onTitleChange = draftViewModel::setTitle,
+            description = draft.description,
+            onDescriptionChange = draftViewModel::setDescription,
+            dueDate = draft.dueDate,
+            onDueDateChange = draftViewModel::setDueDate,
+            assignedToId = draft.assignedTo,
+            onAssignedChange = draftViewModel::setAssignee,
+            repeatType = draft.repeatType,
+            onRepeatChange = draftViewModel::setRepeat,
+            isPriority = draft.isPriority,
+            onPriorityChange = draftViewModel::setPriority,
+            onDismiss = { draftViewModel.close() },
+            onConfirm = { photoBytes ->
                 viewModel.createTask(
-                    title = title,
-                    assignedTo = assignedTo,
-                    dueDate = dueDate,
-                    repeatType = repeatType,
-                    description = description,
-                    isPriority = isPriority,
+                    title = draft.title.trim(),
+                    assignedTo = draft.assignedTo,
+                    dueDate = draft.dueDate,
+                    repeatType = draft.repeatType,
+                    description = draft.description.trim().takeIf { it.isNotBlank() },
+                    isPriority = draft.isPriority,
                     photoBytes = photoBytes
                 )
-                showAddDialog = false
+                draftViewModel.close()
             }
         )
     }
 
     editingTask?.let { task ->
+        var eTitle by rememberSaveable(task.id) { mutableStateOf(task.title) }
+        var eDesc by rememberSaveable(task.id) { mutableStateOf(task.description ?: "") }
+        var eDue by rememberSaveable(task.id) { mutableStateOf(task.dueDate) }
+        var eAssignee by rememberSaveable(task.id) { mutableStateOf(task.assignedTo) }
+        var eRepeat by rememberSaveable(task.id) { mutableStateOf(task.repeatType) }
+        var ePriority by rememberSaveable(task.id) { mutableStateOf(task.isPriority) }
         AddTaskDialog(
             members = members,
             currentUserId = currentUserId,
-            initial = task,
+            isEdit = true,
+            title = eTitle,
+            onTitleChange = { eTitle = it },
+            description = eDesc,
+            onDescriptionChange = { eDesc = it },
+            dueDate = eDue,
+            onDueDateChange = { eDue = it },
+            assignedToId = eAssignee,
+            onAssignedChange = { eAssignee = it },
+            repeatType = eRepeat,
+            onRepeatChange = { eRepeat = it },
+            isPriority = ePriority,
+            onPriorityChange = { ePriority = it },
             onDismiss = { editingTask = null },
-            onConfirm = { title, dueDate, assignedTo, repeatType, description, isPriority, _ ->
+            onConfirm = { _ ->
                 viewModel.updateTask(
                     taskId = task.id,
-                    title = title,
-                    assignedTo = assignedTo,
-                    dueDate = dueDate,
-                    repeatType = repeatType,
-                    description = description,
-                    isPriority = isPriority
+                    title = eTitle.trim(),
+                    assignedTo = eAssignee,
+                    dueDate = eDue,
+                    repeatType = eRepeat,
+                    description = eDesc.trim().takeIf { it.isNotBlank() },
+                    isPriority = ePriority
                 )
                 editingTask = null
             }
@@ -581,26 +615,22 @@ fun RealTaskCard(
 fun AddTaskDialog(
     members: List<FamilyMember> = emptyList(),
     currentUserId: String = "",
-    initial: Task? = null,
+    isEdit: Boolean,
+    title: String,
+    onTitleChange: (String) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    dueDate: String?,
+    onDueDateChange: (String?) -> Unit,
+    assignedToId: String?,
+    onAssignedChange: (String?) -> Unit,
+    repeatType: String,
+    onRepeatChange: (String) -> Unit,
+    isPriority: Boolean,
+    onPriorityChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: (
-        title: String,
-        dueDate: String?,
-        assignedTo: String?,
-        repeatType: String,
-        description: String?,
-        isPriority: Boolean,
-        photoBytes: ByteArray?
-    ) -> Unit
+    onConfirm: (photoBytes: ByteArray?) -> Unit
 ) {
-    val isEdit = initial != null
-    // rememberSaveable — чтобы черновик не пропадал при сворачивании/выгрузке процесса.
-    var title by rememberSaveable { mutableStateOf(initial?.title ?: "") }
-    var description by rememberSaveable { mutableStateOf(initial?.description ?: "") }
-    var dueDate by rememberSaveable { mutableStateOf(initial?.dueDate) }
-    var assignedToId by rememberSaveable { mutableStateOf(initial?.assignedTo) }
-    var repeatType by rememberSaveable { mutableStateOf(initial?.repeatType ?: "none") }
-    var isPriority by rememberSaveable { mutableStateOf(initial?.isPriority ?: false) }
     var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAssigneeDropdown by remember { mutableStateOf(false) }
@@ -620,9 +650,9 @@ fun AddTaskDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    dueDate = datePickerState.selectedDateMillis?.let { millis ->
+                    onDueDateChange(datePickerState.selectedDateMillis?.let { millis ->
                         Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
-                    }
+                    })
                     showDatePicker = false
                 }) { Text("OK", color = Primary) }
             },
@@ -642,7 +672,7 @@ fun AddTaskDialog(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = title,
-                    onValueChange = { title = it },
+                    onValueChange = onTitleChange,
                     label = { Text("Название задачи", color = Outline) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = taskFieldColors(),
@@ -652,7 +682,7 @@ fun AddTaskDialog(
 
                 OutlinedTextField(
                     value = description,
-                    onValueChange = { description = it },
+                    onValueChange = onDescriptionChange,
                     label = { Text("Комментарий (необязательно)", color = Outline) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = taskFieldColors(),
@@ -665,7 +695,7 @@ fun AddTaskDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { isPriority = !isPriority }
+                        .clickable { onPriorityChange(!isPriority) }
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -706,7 +736,7 @@ fun AddTaskDialog(
                     Spacer(Modifier.width(8.dp))
                     Text(dueDate ?: "Срок (необязательно)", modifier = Modifier.weight(1f))
                     if (dueDate != null) {
-                        Text("✕", modifier = Modifier.clickable { dueDate = null })
+                        Text("✕", modifier = Modifier.clickable { onDueDateChange(null) })
                     }
                 }
 
@@ -729,7 +759,7 @@ fun AddTaskDialog(
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Не назначена", color = OnSurfaceVariant) },
-                                onClick = { assignedToId = null; showAssigneeDropdown = false }
+                                onClick = { onAssignedChange(null); showAssigneeDropdown = false }
                             )
                             members.forEach { member ->
                                 DropdownMenuItem(
@@ -739,7 +769,7 @@ fun AddTaskDialog(
                                             color = OnSurface
                                         )
                                     },
-                                    onClick = { assignedToId = member.userId; showAssigneeDropdown = false }
+                                    onClick = { onAssignedChange(member.userId); showAssigneeDropdown = false }
                                 )
                             }
                         }
@@ -764,7 +794,7 @@ fun AddTaskDialog(
                         repeatOptions.forEach { (value, label) ->
                             DropdownMenuItem(
                                 text = { Text(label, color = if (repeatType == value) Primary else OnSurface) },
-                                onClick = { repeatType = value; showRepeatDropdown = false }
+                                onClick = { onRepeatChange(value); showRepeatDropdown = false }
                             )
                         }
                     }
@@ -773,17 +803,7 @@ fun AddTaskDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                if (title.isNotBlank()) {
-                    onConfirm(
-                        title.trim(),
-                        dueDate,
-                        assignedToId,
-                        repeatType,
-                        description.trim().takeIf { it.isNotBlank() },
-                        isPriority,
-                        photoBytes
-                    )
-                }
+                if (title.isNotBlank()) onConfirm(photoBytes)
             }) {
                 Text(if (isEdit) "Сохранить" else "Создать", color = Primary, fontWeight = FontWeight.SemiBold)
             }
