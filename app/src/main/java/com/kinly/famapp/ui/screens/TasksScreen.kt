@@ -40,6 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.kinly.famapp.data.models.FamilyMember
 import com.kinly.famapp.data.models.Task
@@ -63,7 +68,7 @@ fun TasksScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filteredTasks = viewModel.getFilteredTasks()
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var deletingTask by remember { mutableStateOf<Task?>(null) }
 
@@ -369,16 +374,39 @@ private fun CommentRow(comment: TaskComment, authorName: String?) {
             Text(comment.body, color = OnSurface, fontSize = 14.sp)
         }
         if (comment.imageUrl != null) {
+            var fullscreen by remember { mutableStateOf(false) }
             Spacer(Modifier.height(6.dp))
             AsyncImage(
                 model = comment.imageUrl,
-                contentDescription = null,
+                contentDescription = "Фото — нажмите, чтобы открыть",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 220.dp)
                     .clip(RoundedCornerShape(12.dp))
+                    .clickable { fullscreen = true }
             )
+            if (fullscreen) {
+                Dialog(
+                    onDismissRequest = { fullscreen = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xF2000000))
+                            .clickable { fullscreen = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = comment.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -566,12 +594,13 @@ fun AddTaskDialog(
     ) -> Unit
 ) {
     val isEdit = initial != null
-    var title by remember { mutableStateOf(initial?.title ?: "") }
-    var description by remember { mutableStateOf(initial?.description ?: "") }
-    var dueDate by remember { mutableStateOf(initial?.dueDate) }
-    var assignedToId by remember { mutableStateOf(initial?.assignedTo) }
-    var repeatType by remember { mutableStateOf(initial?.repeatType ?: "none") }
-    var isPriority by remember { mutableStateOf(initial?.isPriority ?: false) }
+    // rememberSaveable — чтобы черновик не пропадал при сворачивании/выгрузке процесса.
+    var title by rememberSaveable { mutableStateOf(initial?.title ?: "") }
+    var description by rememberSaveable { mutableStateOf(initial?.description ?: "") }
+    var dueDate by rememberSaveable { mutableStateOf(initial?.dueDate) }
+    var assignedToId by rememberSaveable { mutableStateOf(initial?.assignedTo) }
+    var repeatType by rememberSaveable { mutableStateOf(initial?.repeatType ?: "none") }
+    var isPriority by rememberSaveable { mutableStateOf(initial?.isPriority ?: false) }
     var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAssigneeDropdown by remember { mutableStateOf(false) }
@@ -617,7 +646,8 @@ fun AddTaskDialog(
                     label = { Text("Название задачи", color = Outline) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = taskFieldColors(),
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                 )
 
                 OutlinedTextField(
@@ -626,7 +656,8 @@ fun AddTaskDialog(
                     label = { Text("Комментарий (необязательно)", color = Outline) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = taskFieldColors(),
-                    maxLines = 3
+                    maxLines = 3,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                 )
 
                 // Приоритет

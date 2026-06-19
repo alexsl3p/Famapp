@@ -1,6 +1,6 @@
 {
-  "versionCode": 11,
-  "versionName": "2.0",
+  "versionCode": 12,
+  "versionName": "2.1",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Вкладка «Каталог»: добавление и удаление продуктов; обнуление статистики; улучшения."
+  "notes": "Задачи: черновик новой задачи не пропадает при сворачивании, автозаглавная буква, фото открывается на весь экран."
 }
