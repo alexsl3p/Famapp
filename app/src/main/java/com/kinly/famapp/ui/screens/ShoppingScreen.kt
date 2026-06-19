@@ -75,6 +75,7 @@ private fun pluralItems(n: Int): String {
 @Composable
 fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val productState by productViewModel.uiState.collectAsState()
     var showCreateList by remember { mutableStateOf(false) }
     var showListMenu by remember { mutableStateOf(false) }
     var deletingList by remember { mutableStateOf<ShoppingList?>(null) }
@@ -188,7 +189,12 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                     }
 
                     Divider(color = Color(0x1AFFFFFF))
-                    InlineAddRow(onAdd = { title, qty -> viewModel.addItem(currentList.id, title, qty) })
+                    InlineAddRow(
+                        products = productState.products,
+                        onAdd = { title, qty, productId ->
+                            viewModel.addItem(currentList.id, title, qty, productId = productId)
+                        }
+                    )
 
                     if (items.any { it.isChecked }) {
                         Divider(color = Color(0x1AFFFFFF))
@@ -245,12 +251,28 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
  * Подтверждение — Enter/Done: товар добавляется и поле очищается для следующего.
  */
 @Composable
-private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
+private fun InlineAddRow(
+    products: List<Product>,
+    onAdd: (String, String?, String?) -> Unit
+) {
     var adding by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var qty by remember { mutableIntStateOf(1) }
     var hasFocused by remember { mutableStateOf(false) }
+    var suppressSave by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+
+    // Подсказки из каталога: совпадения по названию (сначала те, что начинаются с введённого).
+    val suggestions = remember(name, products) {
+        val q = name.trim()
+        if (q.isEmpty()) emptyList()
+        else products.asSequence()
+            .filter { it.name.contains(q, ignoreCase = true) && !it.name.equals(q, ignoreCase = true) }
+            .sortedByDescending { it.name.startsWith(q, ignoreCase = true) }
+            .distinctBy { it.name.lowercase() }
+            .take(6)
+            .toList()
+    }
 
     if (!adding) {
         Row(
@@ -270,88 +292,118 @@ private fun InlineAddRow(onAdd: (String, String?) -> Unit) {
             Text("Добавить товар", color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     } else {
-        // Строка-черновик в том же виде, что и товар
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(Color(0x14FFFFFF))
-                    .border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(7.dp))
-            )
-            Spacer(Modifier.width(12.dp))
-            val save: () -> Unit = {
-                if (name.isNotBlank()) {
-                    onAdd(name.trim(), qty.toString())
-                    name = ""; qty = 1
-                    focusRequester.requestFocus()
-                } else {
-                    adding = false
-                }
-            }
-            BasicTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                textStyle = TextStyle(color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                cursorBrush = SolidColor(ShoppingPrimary),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(onDone = { save() }),
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(focusRequester)
-                    .onFocusChanged { state ->
-                        // Ждём, пока поле реально получит фокус; только потом реагируем на его потерю,
-                        // иначе строка закрывается сразу при появлении (первый колбэк — unfocused).
-                        if (state.isFocused) {
-                            hasFocused = true
-                        } else if (hasFocused) {
-                            if (name.isNotBlank()) {
-                                onAdd(name.trim(), qty.toString())
-                                name = ""; qty = 1
-                            }
-                            adding = false
-                        }
-                    },
-                decorationBox = { inner ->
-                    Box(contentAlignment = Alignment.CenterStart) {
-                        if (name.isEmpty()) Text("Название товара", color = Outline, fontSize = 14.sp)
-                        inner()
-                    }
-                }
-            )
-            Spacer(Modifier.width(8.dp))
-            // Сохранение — без галочки: по Enter/Done или когда тапнул в любое другое место.
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Строка-черновик в том же виде, что и товар
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                StepButton(Icons.Outlined.Remove, "Меньше", size = 26.dp) { if (qty > 1) qty-- }
-                Text(
-                    text = "$qty",
-                    color = OnSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.widthIn(min = 18.dp)
-                )
-                StepButton(Icons.Filled.Add, "Больше", size = 26.dp) { qty++ }
-                Spacer(Modifier.width(2.dp))
-                // Передумал добавлять — закрыть черновик
                 Box(
                     modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .clickable { name = ""; qty = 1; adding = false },
-                    contentAlignment = Alignment.Center
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(Color(0x14FFFFFF))
+                        .border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(7.dp))
+                )
+                Spacer(Modifier.width(12.dp))
+                val save: () -> Unit = {
+                    if (name.isNotBlank()) {
+                        onAdd(name.trim(), qty.toString(), null)
+                        name = ""; qty = 1
+                        focusRequester.requestFocus()
+                    } else {
+                        adding = false
+                    }
+                }
+                BasicTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    textStyle = TextStyle(color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                    cursorBrush = SolidColor(ShoppingPrimary),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { save() }),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { state ->
+                            if (state.isFocused) {
+                                hasFocused = true
+                            } else if (hasFocused) {
+                                if (!suppressSave && name.isNotBlank()) {
+                                    onAdd(name.trim(), qty.toString(), null)
+                                }
+                                suppressSave = false
+                                name = ""; qty = 1
+                                adding = false
+                            }
+                        },
+                    decorationBox = { inner ->
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            if (name.isEmpty()) Text("Название товара", color = Outline, fontSize = 14.sp)
+                            inner()
+                        }
+                    }
+                )
+                Spacer(Modifier.width(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(Icons.Outlined.Close, contentDescription = "Отменить", tint = Outline, modifier = Modifier.size(18.dp))
+                    StepButton(Icons.Outlined.Remove, "Меньше", size = 26.dp) { if (qty > 1) qty-- }
+                    Text(
+                        text = "$qty",
+                        color = OnSurface,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.widthIn(min = 18.dp)
+                    )
+                    StepButton(Icons.Filled.Add, "Больше", size = 26.dp) { qty++ }
+                    Spacer(Modifier.width(2.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .clickable { name = ""; qty = 1; adding = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.Close, contentDescription = "Отменить", tint = Outline, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+
+            // Подсказки из каталога
+            if (suggestions.isNotEmpty()) {
+                Divider(color = Color(0x14FFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
+                suggestions.forEach { product ->
+                    val emoji = emojiForItem(product.name)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                suppressSave = true
+                                onAdd(product.name, qty.toString(), product.id)
+                                name = ""; qty = 1
+                                adding = false
+                            }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.Inventory2, contentDescription = null, tint = Primary.copy(alpha = 0.7f), modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(10.dp))
+                        if (emoji != null) {
+                            Text(emoji, fontSize = 15.sp)
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(product.name, color = OnSurface, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        if (!product.brand.isNullOrBlank()) {
+                            Text(product.brand, color = OnSurfaceVariant, fontSize = 12.sp)
+                        }
+                    }
                 }
             }
         }
