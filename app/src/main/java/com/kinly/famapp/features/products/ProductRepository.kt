@@ -73,6 +73,12 @@ class ProductRepository @Inject constructor(private val supabase: SupabaseClient
         )
         return rpcJson.decodeFromString<Product>(result.data)
     }
+
+    suspend fun deleteProduct(productId: String) {
+        runCatching {
+            supabase.postgrest["products"].delete { filter { eq("id", productId) } }
+        }
+    }
 }
 
 fun normalizeBarcode(raw: String): String =

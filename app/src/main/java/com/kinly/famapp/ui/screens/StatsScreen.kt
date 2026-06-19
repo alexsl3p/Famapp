@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material.icons.outlined.Warning
@@ -30,6 +31,24 @@ import com.kinly.famapp.ui.theme.*
 @Composable
 fun StatsScreen(viewModel: StatsViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    var showResetConfirm by remember { mutableStateOf(false) }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            containerColor = Color(0xFF1D2538),
+            title = { Text("Обнулить статистику?", color = OnSurface) },
+            text = { Text("История покупок будет удалена, счётчики обнулятся. Текущие остатки в инвентаре не тронутся.", color = OnSurfaceVariant) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.resetStats(); showResetConfirm = false }) {
+                    Text("Обнулить", color = Secondary, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) { Text("Отмена", color = OnSurfaceVariant) }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -52,8 +71,13 @@ fun StatsScreen(viewModel: StatsViewModel) {
                     modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
                 )
             }
-            IconButton(onClick = { viewModel.refresh() }) {
-                Icon(imageVector = Icons.Outlined.Refresh, contentDescription = "Обновить", tint = OnSurfaceVariant)
+            Row {
+                IconButton(onClick = { showResetConfirm = true }) {
+                    Icon(imageVector = Icons.Outlined.DeleteSweep, contentDescription = "Обнулить статистику", tint = OnSurfaceVariant)
+                }
+                IconButton(onClick = { viewModel.refresh() }) {
+                    Icon(imageVector = Icons.Outlined.Refresh, contentDescription = "Обновить", tint = OnSurfaceVariant)
+                }
             }
         }
 

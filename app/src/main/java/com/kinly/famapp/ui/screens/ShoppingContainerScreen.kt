@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material3.*
@@ -42,17 +43,16 @@ fun ShoppingContainerScreen(
     val tabs = listOf(
         Icons.Outlined.FormatListBulleted to "Список",
         Icons.Outlined.Inventory2 to "Инвентарь",
+        Icons.Outlined.Category to "Каталог",
         Icons.Outlined.BarChart to "Статистика"
     )
 
-    // При открытии вкладок инвентаря/статистики подтягиваем свежие данные,
-    // чтобы товары, отмеченные купленными, сразу появлялись (не ждём realtime).
+    // При открытии вкладок подтягиваем свежие данные (не ждём realtime).
     LaunchedEffect(selectedTab) {
-        if (selectedTab == 1) {
-            productViewModel.reload()
-            inventoryViewModel.reload()
-        } else if (selectedTab == 2) {
-            statsViewModel.refresh()
+        when (selectedTab) {
+            1 -> { productViewModel.reload(); inventoryViewModel.reload() }
+            2 -> productViewModel.reload()
+            3 -> statsViewModel.refresh()
         }
     }
 
@@ -73,7 +73,8 @@ fun ShoppingContainerScreen(
                     productViewModel.reload()
                 }
             )
-            2 -> StatsScreen(viewModel = statsViewModel)
+            2 -> CatalogScreen(viewModel = productViewModel)
+            3 -> StatsScreen(viewModel = statsViewModel)
         }
     }
 }

@@ -123,6 +123,15 @@ class ProductViewModel @Inject constructor(
         }
     }
 
+    /** Удаление продукта из каталога (инвентарь по нему каскадно удаляется, в списках product_id обнуляется). */
+    fun deleteProduct(productId: String) {
+        _uiState.value = _uiState.value.copy(products = _uiState.value.products.filterNot { it.id == productId })
+        viewModelScope.launch {
+            runCatching { productRepository.deleteProduct(productId) }
+                .onFailure { reload() }
+        }
+    }
+
     /**
      * Обрабатывает отсканированный штрихкод: сначала ищет в семейном каталоге,
      * затем в Open Food Facts. Результат публикуется в [scanResult].

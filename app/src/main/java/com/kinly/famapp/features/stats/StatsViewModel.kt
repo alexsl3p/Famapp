@@ -48,4 +48,13 @@ class StatsViewModel @Inject constructor(
             )
         }
     }
+
+    /** Обнуляет статистику покупок и перезагружает. */
+    fun resetStats() {
+        val familyId = currentFamilyId ?: return
+        viewModelScope.launch {
+            statsRepository.resetStats(familyId)
+            refresh()
+        }
+    }
 }

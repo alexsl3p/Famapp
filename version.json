@@ -1,6 +1,6 @@
 {
-  "versionCode": 10,
-  "versionName": "1.9",
+  "versionCode": 11,
+  "versionName": "2.0",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Автоподсказки из каталога при добавлении товара в список; другие улучшения."
+  "notes": "Вкладка «Каталог»: добавление и удаление продуктов; обнуление статистики; улучшения."
 }

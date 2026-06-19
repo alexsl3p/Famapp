@@ -2,6 +2,9 @@ package com.kinly.famapp.features.stats
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import javax.inject.Inject
@@ -74,4 +77,13 @@ class StatsRepository @Inject constructor(private val supabase: SupabaseClient) 
                 .select { filter { eq("family_id", familyId) } }
                 .decodeList<PurchaseCadence>()
         }.getOrElse { emptyList() }
+
+    /** Обнуляет статистику покупок (удаляет историю событий инвентаря семьи). */
+    suspend fun resetStats(familyId: String): Result<Unit> = runCatching {
+        supabase.postgrest.rpc(
+            "reset_family_stats",
+            buildJsonObject { put("p_family_id", familyId) }
+        )
+        Unit
+    }
 }
