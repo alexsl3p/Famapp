@@ -23,8 +23,8 @@ android {
         applicationId = "com.kinly.famapp"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "2.3"
+        versionCode = 15
+        versionName = "2.4"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -95,6 +95,7 @@ dependencies {
 
     // Glance — виджеты на главном экране
     implementation("androidx.glance:glance-appwidget:1.1.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // Hilt
     implementation(libs.hilt.android)

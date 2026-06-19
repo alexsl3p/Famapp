@@ -1,6 +1,6 @@
 {
-  "versionCode": 14,
-  "versionName": "2.3",
+  "versionCode": 15,
+  "versionName": "2.4",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Виджет на главный экран: список покупок или задачи с переключателем."
+  "notes": "Виджет сам обновляется в фоне (WorkManager) — свежие покупки и задачи без открытия приложения."
 }

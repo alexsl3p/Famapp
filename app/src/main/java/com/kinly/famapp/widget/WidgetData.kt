@@ -14,6 +14,7 @@ object WidgetData {
     private const val K_MODE = "mode"
     private const val K_SHOPPING = "shopping"
     private const val K_TASKS = "tasks"
+    private const val K_FAMILY = "family_id"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -26,6 +27,12 @@ object WidgetData {
             tasks = p.getString(K_TASKS, "").orEmpty().lines().filter { it.isNotBlank() }
         )
     }
+
+    fun writeFamilyId(context: Context, familyId: String) {
+        prefs(context).edit().putString(K_FAMILY, familyId).apply()
+    }
+
+    fun readFamilyId(context: Context): String? = prefs(context).getString(K_FAMILY, null)
 
     fun writeShopping(context: Context, items: List<String>) {
         prefs(context).edit().putString(K_SHOPPING, items.joinToString("\n")).apply()

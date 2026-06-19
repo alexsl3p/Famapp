@@ -112,4 +112,14 @@ class ToggleModeAction : ActionCallback {
 
 class FamilyWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = FamilyWidget()
+
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: android.appwidget.AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        WidgetWork.schedule(context)
+        WidgetWork.refreshNow(context)
+    }
 }

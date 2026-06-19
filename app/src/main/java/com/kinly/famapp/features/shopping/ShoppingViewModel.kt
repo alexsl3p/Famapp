@@ -53,6 +53,7 @@ class ShoppingViewModel @Inject constructor(
 
     fun load(familyId: String) {
         currentFamilyId = familyId
+        widgetUpdater.setFamily(familyId)
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {

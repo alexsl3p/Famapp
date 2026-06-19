@@ -17,6 +17,11 @@ class WidgetUpdater @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    fun setFamily(familyId: String) {
+        WidgetData.writeFamilyId(context, familyId)
+        WidgetWork.schedule(context)
+    }
+
     fun updateShopping(items: List<String>) {
         WidgetData.writeShopping(context, items)
         refresh()

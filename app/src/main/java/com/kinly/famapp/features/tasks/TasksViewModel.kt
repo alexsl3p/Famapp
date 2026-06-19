@@ -57,6 +57,7 @@ class TasksViewModel @Inject constructor(
     fun load(familyId: String, userId: String) {
         currentFamilyId = familyId
         currentUserId = userId
+        widgetUpdater.setFamily(familyId)
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             refresh()
