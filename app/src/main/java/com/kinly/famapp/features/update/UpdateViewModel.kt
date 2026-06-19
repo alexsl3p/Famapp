@@ -28,9 +28,9 @@ class UpdateViewModel @Inject constructor(
 
     private var checked = false
 
-    /** version.json в публичном бакете Supabase Storage (бакет «downloads»). */
+    /** Последняя версия берётся из таблицы app_release (её обновляет разработчик через БД). */
     private val manifestUrl: String =
-        "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/downloads/version.json"
+        "${BuildConfig.SUPABASE_URL}/rest/v1/app_release?select=version_code,version_name,apk_url,notes&order=version_code.desc&limit=1"
 
     fun checkForUpdate() {
         if (checked) return
