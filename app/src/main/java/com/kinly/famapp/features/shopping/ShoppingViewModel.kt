@@ -42,7 +42,8 @@ data class ShoppingUiState(
 class ShoppingViewModel @Inject constructor(
     private val shoppingRepository: ShoppingRepository,
     private val supabase: SupabaseClient,
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences>,
+    private val widgetUpdater: com.kinly.famapp.widget.WidgetUpdater
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ShoppingUiState())
@@ -65,6 +66,7 @@ class ShoppingViewModel @Inject constructor(
                     itemsByList = all.groupBy { it.listId },
                     isLoading = false
                 )
+                pushWidget(all)
                 subscribeRealtime(familyId)
             } catch (e: Exception) {
                 val cached = loadFromCache()
@@ -97,6 +99,12 @@ class ShoppingViewModel @Inject constructor(
             itemsByList = all.groupBy { it.listId },
             isOffline = false
         )
+        pushWidget(all)
+    }
+
+    /** Кладёт активные (некупленные) товары в снимок виджета. */
+    private fun pushWidget(items: List<ShoppingItem>) {
+        widgetUpdater.updateShopping(items.filter { !it.isChecked }.map { it.title })
     }
 
     private suspend fun saveToCache(items: List<ShoppingItem>) {

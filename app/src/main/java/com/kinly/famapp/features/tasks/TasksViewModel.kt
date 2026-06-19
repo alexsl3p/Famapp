@@ -41,7 +41,8 @@ data class CommentsUiState(
 class TasksViewModel @Inject constructor(
     private val tasksRepository: TasksRepository,
     private val storageRepository: StorageRepository,
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val widgetUpdater: com.kinly.famapp.widget.WidgetUpdater
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TasksUiState())
@@ -68,6 +69,7 @@ class TasksViewModel @Inject constructor(
         val tasks = tasksRepository.getTasks(familyId)
         val attachments = tasksRepository.getTaskIdsWithAttachments(familyId)
         _uiState.value = _uiState.value.copy(tasks = tasks, attachmentTaskIds = attachments, isLoading = false)
+        widgetUpdater.updateTasks(tasks.filter { !it.isCompleted }.map { it.title })
     }
 
     private fun subscribeRealtime(familyId: String) {

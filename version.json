@@ -1,6 +1,6 @@
 {
-  "versionCode": 13,
-  "versionName": "2.2",
+  "versionCode": 14,
+  "versionName": "2.3",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Черновик новой задачи теперь хранится надёжно (переживает выгрузку процесса)."
+  "notes": "Виджет на главный экран: список покупок или задачи с переключателем."
 }
