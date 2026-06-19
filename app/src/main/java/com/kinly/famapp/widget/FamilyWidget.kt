@@ -7,6 +7,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -18,6 +20,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -47,6 +50,7 @@ private fun WidgetContent(data: WidgetSnapshot) {
     val muted = Color(0xFF9DA0B5)
     val isTasks = data.mode == "tasks"
     val items = if (isTasks) data.tasks else data.shopping
+    val openTab = if (isTasks) "tasks" else "shopping"
 
     Column(
         modifier = GlanceModifier
@@ -55,6 +59,8 @@ private fun WidgetContent(data: WidgetSnapshot) {
             .background(Color(0xF21A1430))
             .cornerRadius(20.dp)
             .padding(14.dp)
+            // Тап по виджету открывает соответствующий раздел приложения.
+            .clickable(actionStartActivity<MainActivity>(actionParametersOf(OpenTabKey to openTab)))
     ) {
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
@@ -63,7 +69,7 @@ private fun WidgetContent(data: WidgetSnapshot) {
             Text(
                 text = if (isTasks) "Задачи" else "Покупки",
                 style = TextStyle(color = ColorProvider(accent), fontSize = 15.sp, fontWeight = FontWeight.Bold),
-                modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity<MainActivity>())
+                modifier = GlanceModifier.defaultWeight()
             )
             Text(
                 text = if (isTasks) "→ Покупки" else "→ Задачи",
@@ -98,6 +104,9 @@ private fun WidgetContent(data: WidgetSnapshot) {
     }
 }
 
+/** Ключ параметра «какой раздел открыть» — приходит в Activity как intent extra "open_tab". */
+val OpenTabKey = ActionParameters.Key<String>("open_tab")
+
 /** Переключение Покупки ↔ Задачи прямо в виджете. */
 class ToggleModeAction : ActionCallback {
     override suspend fun onAction(
@@ -106,7 +115,7 @@ class ToggleModeAction : ActionCallback {
         parameters: androidx.glance.action.ActionParameters
     ) {
         WidgetData.toggleMode(context)
-        FamilyWidget().update(context, glanceId)
+        FamilyWidget().updateAll(context)
     }
 }
 

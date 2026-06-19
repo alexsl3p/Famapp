@@ -1,6 +1,7 @@
 package com.kinly.famapp
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -62,21 +63,37 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    // Раздел, который надо открыть по тапу на виджет ("shopping"/"tasks").
+    private val pendingOpenTab = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingOpenTab.value = intent?.getStringExtra("open_tab")
         enableEdgeToEdge()
         setContent {
             val appearanceViewModel: AppearanceViewModel = hiltViewModel()
             val fontThemeId by appearanceViewModel.fontThemeId.collectAsState()
             FamAppTheme(fontThemeId = fontThemeId) {
-                KinlyApp()
+                KinlyApp(
+                    requestedTab = pendingOpenTab.value,
+                    onTabConsumed = { pendingOpenTab.value = null }
+                )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingOpenTab.value = intent.getStringExtra("open_tab")
     }
 }
 
 @Composable
-fun KinlyApp() {
+fun KinlyApp(
+    requestedTab: String? = null,
+    onTabConsumed: () -> Unit = {}
+) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
     val isSigningIn by authViewModel.isSigningIn.collectAsState()
@@ -156,7 +173,9 @@ fun KinlyApp() {
             is AuthState.Authenticated -> {
                 MainAppContent(
                     profile = state.profile,
-                    authViewModel = authViewModel
+                    authViewModel = authViewModel,
+                    requestedTab = requestedTab,
+                    onTabConsumed = onTabConsumed
                 )
             }
         }
@@ -166,7 +185,9 @@ fun KinlyApp() {
 @Composable
 fun MainAppContent(
     profile: com.kinly.famapp.data.models.Profile,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    requestedTab: String? = null,
+    onTabConsumed: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -196,6 +217,24 @@ fun MainAppContent(
     val familyUiState by familyViewModel.uiState.collectAsState()
     val notificationState by notificationViewModel.uiState.collectAsState()
     val shoppingUiState by shoppingViewModel.uiState.collectAsState()
+
+    // Открытие нужного раздела по тапу на виджет.
+    LaunchedEffect(requestedTab) {
+        val route = when (requestedTab) {
+            "shopping" -> Screen.Shopping.route
+            "tasks" -> Screen.Tasks.route
+            else -> null
+        }
+        if (route != null) {
+            tabStateViewModel.saveTab(route)
+            navController.navigate(route) {
+                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+            onTabConsumed()
+        }
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val voiceScope = rememberCoroutineScope()

@@ -1,6 +1,6 @@
 {
-  "versionCode": 15,
-  "versionName": "2.4",
+  "versionCode": 16,
+  "versionName": "2.5",
   "apkUrl": "https://jpgezwiprogeciqxptxq.supabase.co/storage/v1/object/public/downloads/famapp-latest.apk",
-  "notes": "Виджет сам обновляется в фоне (WorkManager) — свежие покупки и задачи без открытия приложения."
+  "notes": "Виджет: надёжный переключатель Покупки/Задачи и тап открывает нужный раздел приложения."
 }
