@@ -101,7 +101,7 @@ fun KinlyApp(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Проверка обновлений (само-обновление через Supabase Storage)
+    // Проверка обновлений (само-обновление через таблицу app_release)
     val updateViewModel: UpdateViewModel = hiltViewModel()
     val updateState by updateViewModel.state.collectAsState()
     LaunchedEffect(Unit) { updateViewModel.checkForUpdate() }
@@ -110,6 +110,16 @@ fun KinlyApp(
         onUpdate = { updateViewModel.startUpdate(context) },
         onDismiss = { updateViewModel.dismiss() }
     )
+
+    // Запрос разрешения на уведомления (Android 13+).
+    val notifPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            notifPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -301,9 +311,13 @@ fun MainAppContent(
                     tabStateViewModel.saveTab(route)
                     // Если открыт не-табовый экран (уведомления/профиль) — убираем его без
                     // сохранения, чтобы при возврате на вкладку он не всплывал снова.
-                    if (currentRoute == Screen.Notifications.route ||
-                        currentRoute == Screen.Profile.route ||
-                        currentRoute == Screen.Settings.route
+                    if (currentRoute in setOf(
+                            Screen.Notifications.route,
+                            Screen.Profile.route,
+                            Screen.Settings.route,
+                            Screen.NotificationSettings.route,
+                            Screen.Appearance.route
+                        )
                     ) {
                         navController.popBackStack()
                     }
@@ -380,10 +394,23 @@ fun MainAppContent(
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(
-                    notificationViewModel = notificationViewModel,
-                    appearanceViewModel = appearanceViewModel,
+                    unreadCount = notificationState.unreadCount,
                     onBack = { navController.popBackStack() },
-                    onOpenNotifications = { navController.navigate(Screen.Notifications.route) }
+                    onOpenNotifications = { navController.navigate(Screen.NotificationSettings.route) },
+                    onOpenAppearance = { navController.navigate(Screen.Appearance.route) }
+                )
+            }
+            composable(Screen.NotificationSettings.route) {
+                NotificationSettingsScreen(
+                    viewModel = notificationViewModel,
+                    onBack = { navController.popBackStack() },
+                    onOpenHistory = { navController.navigate(Screen.Notifications.route) }
+                )
+            }
+            composable(Screen.Appearance.route) {
+                AppearanceScreen(
+                    appearanceViewModel = appearanceViewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
         }

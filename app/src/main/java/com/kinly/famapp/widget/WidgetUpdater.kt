@@ -22,6 +22,10 @@ class WidgetUpdater @Inject constructor(
         WidgetWork.schedule(context)
     }
 
+    fun setUser(userId: String) {
+        WidgetData.writeUserId(context, userId)
+    }
+
     fun updateShopping(items: List<String>) {
         WidgetData.writeShopping(context, items)
         refresh()
