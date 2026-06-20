@@ -43,6 +43,7 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
         assignedTo: String? = null,
         dueDate: String? = null,
         repeatType: String = "none",
+        taskType: String = "current",
         isPriority: Boolean = false
     ): String? {
         val userId = supabase.auth.currentUserOrNull()?.id ?: return null
@@ -60,7 +61,16 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
             }
         )
         // RPC возвращает uuid в виде JSON-строки, напр. "\"<uuid>\""
-        return result.data.trim().trim('"').takeIf { it.isNotBlank() && it != "null" }
+        val taskId = result.data.trim().trim('"').takeIf { it.isNotBlank() && it != "null" }
+        // task_type не входит в RPC — проставляем отдельно, если он не дефолтный.
+        if (taskId != null && taskType != "current") {
+            runCatching {
+                supabase.postgrest["tasks"].update(
+                    buildJsonObject { put("task_type", taskType) }
+                ) { filter { eq("id", taskId) } }
+            }
+        }
+        return taskId
     }
 
     /** Множество id задач, у которых есть прикреплённое фото/файл (комментарий с image_url). */
@@ -81,6 +91,7 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
         assignedTo: String?,
         dueDate: String?,
         repeatType: String,
+        taskType: String,
         isPriority: Boolean
     ) {
         runCatching {
@@ -91,6 +102,7 @@ class TasksRepository @Inject constructor(private val supabase: SupabaseClient) 
                     put("assigned_to", assignedTo)
                     put("due_date", dueDate)
                     put("repeat_type", repeatType)
+                    put("task_type", taskType)
                     put("is_priority", isPriority)
                 }
             ) {

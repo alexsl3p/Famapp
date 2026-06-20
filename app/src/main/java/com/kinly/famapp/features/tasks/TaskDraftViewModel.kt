@@ -22,7 +22,7 @@ data class TaskDraft(
     val description: String = "",
     val dueDate: String? = null,
     val assignedTo: String? = null,
-    val repeatType: String = "none",
+    val taskType: String = "current",
     val isPriority: Boolean = false
 )
 
@@ -31,7 +31,7 @@ private val K_TITLE = stringPreferencesKey("task_draft_title")
 private val K_DESC = stringPreferencesKey("task_draft_desc")
 private val K_DUE = stringPreferencesKey("task_draft_due")
 private val K_ASSIGNEE = stringPreferencesKey("task_draft_assignee")
-private val K_REPEAT = stringPreferencesKey("task_draft_repeat")
+private val K_TYPE = stringPreferencesKey("task_draft_type")
 private val K_PRIORITY = booleanPreferencesKey("task_draft_priority")
 
 @HiltViewModel
@@ -47,7 +47,7 @@ class TaskDraftViewModel @Inject constructor(
                 description = p[K_DESC] ?: "",
                 dueDate = p[K_DUE]?.ifBlank { null },
                 assignedTo = p[K_ASSIGNEE]?.ifBlank { null },
-                repeatType = p[K_REPEAT] ?: "none",
+                taskType = p[K_TYPE] ?: "current",
                 isPriority = p[K_PRIORITY] ?: false
             )
         }
@@ -58,14 +58,14 @@ class TaskDraftViewModel @Inject constructor(
     fun setDescription(v: String) = edit { it[K_DESC] = v }
     fun setDueDate(v: String?) = edit { it[K_DUE] = v ?: "" }
     fun setAssignee(v: String?) = edit { it[K_ASSIGNEE] = v ?: "" }
-    fun setRepeat(v: String) = edit { it[K_REPEAT] = v }
+    fun setTaskType(v: String) = edit { it[K_TYPE] = v }
     fun setPriority(v: Boolean) = edit { it[K_PRIORITY] = v }
 
     /** Закрыть и очистить черновик. */
     fun close() = edit {
         it[K_OPEN] = false
         it.remove(K_TITLE); it.remove(K_DESC); it.remove(K_DUE)
-        it.remove(K_ASSIGNEE); it.remove(K_REPEAT); it.remove(K_PRIORITY)
+        it.remove(K_ASSIGNEE); it.remove(K_TYPE); it.remove(K_PRIORITY)
     }
 
     private fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {

@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class TaskFilter { ALL, MINE, COMPLETED }
+enum class TaskFilter { ALL, CURRENT, DAILY, LONGTERM, COMPLETED }
 
 data class TasksUiState(
     val tasks: List<Task> = emptyList(),
@@ -117,6 +117,7 @@ class TasksViewModel @Inject constructor(
         assignedTo: String? = null,
         dueDate: String? = null,
         repeatType: String = "none",
+        taskType: String = "current",
         description: String? = null,
         isPriority: Boolean = false,
         photoBytes: ByteArray? = null
@@ -130,6 +131,7 @@ class TasksViewModel @Inject constructor(
                     assignedTo = assignedTo,
                     dueDate = dueDate,
                     repeatType = repeatType,
+                    taskType = taskType,
                     isPriority = isPriority
                 )
                 // Если при создании прикрепили фото — кладём его первым комментарием.
@@ -152,12 +154,13 @@ class TasksViewModel @Inject constructor(
         assignedTo: String?,
         dueDate: String?,
         repeatType: String,
+        taskType: String,
         description: String?,
         isPriority: Boolean
     ) {
         viewModelScope.launch {
             try {
-                tasksRepository.updateTask(taskId, title, description, assignedTo, dueDate, repeatType, isPriority)
+                tasksRepository.updateTask(taskId, title, description, assignedTo, dueDate, repeatType, taskType, isPriority)
                 refresh()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
@@ -223,10 +226,11 @@ class TasksViewModel @Inject constructor(
 
     fun getFilteredTasks(): List<Task> {
         val tasks = _uiState.value.tasks
-        val userId = currentUserId
         return when (_uiState.value.filter) {
             TaskFilter.ALL -> tasks.filter { !it.isCompleted }
-            TaskFilter.MINE -> tasks.filter { !it.isCompleted && it.assignedTo == userId }
+            TaskFilter.CURRENT -> tasks.filter { !it.isCompleted && it.taskType == "current" }
+            TaskFilter.DAILY -> tasks.filter { !it.isCompleted && it.taskType == "daily" }
+            TaskFilter.LONGTERM -> tasks.filter { !it.isCompleted && it.taskType == "longterm" }
             TaskFilter.COMPLETED -> tasks.filter { it.isCompleted }
         }
     }

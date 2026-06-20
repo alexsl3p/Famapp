@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AddAPhoto
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
@@ -38,6 +40,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
@@ -84,7 +87,13 @@ fun TasksScreen(
     }
 
     val membersMap = remember(members) { members.associate { it.userId to it.displayName } }
-    val tabs = listOf("Все" to TaskFilter.ALL, "Мои" to TaskFilter.MINE, "Готово" to TaskFilter.COMPLETED)
+    val tabs = listOf(
+        "Все" to TaskFilter.ALL,
+        "Текущие" to TaskFilter.CURRENT,
+        "Ежедневные" to TaskFilter.DAILY,
+        "Долгосрочные" to TaskFilter.LONGTERM,
+        "Готово" to TaskFilter.COMPLETED
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -109,7 +118,13 @@ fun TasksScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(bottom = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 tabs.forEach { (label, filter) ->
                     val isSelected = uiState.filter == filter
                     Box(
@@ -118,15 +133,15 @@ fun TasksScreen(
                             .background(if (isSelected) Color(0x40630ED4) else Color(0x0DFFFFFF))
                             .border(1.dp, if (isSelected) Color(0x80630ED4) else Color(0x1AFFFFFF), RoundedCornerShape(20.dp))
                             .clickable { viewModel.setFilter(filter) }
-                            .padding(horizontal = 20.dp, vertical = 8.dp)
-                            .wrapContentWidth(),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = label,
                             color = if (isSelected) Primary else Color(0xFFB0B0C0),
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            maxLines = 1
                         )
                     }
                 }
@@ -145,20 +160,25 @@ fun TasksScreen(
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                 } else {
-                    filteredTasks.forEach { task ->
-                        RealTaskCard(
-                            task = task,
-                            membersMap = membersMap,
-                            currentUserId = currentUserId,
-                            hasAttachment = task.id in uiState.attachmentTaskIds,
-                            onComplete = { viewModel.completeTask(task.id) },
-                            onUncomplete = { viewModel.uncompleteTask(task.id) },
-                            onTogglePriority = { viewModel.togglePriority(task.id, !task.isPriority) },
-                            onOpenComments = { viewModel.openComments(task.id) },
-                            onEdit = { editingTask = task },
-                            onDelete = { deletingTask = task }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                    GlassCard(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                        Column {
+                            filteredTasks.forEachIndexed { index, task ->
+                                CompactTaskRow(
+                                    task = task,
+                                    membersMap = membersMap,
+                                    hasAttachment = task.id in uiState.attachmentTaskIds,
+                                    onComplete = { viewModel.completeTask(task.id) },
+                                    onUncomplete = { viewModel.uncompleteTask(task.id) },
+                                    onTogglePriority = { viewModel.togglePriority(task.id, !task.isPriority) },
+                                    onOpenComments = { viewModel.openComments(task.id) },
+                                    onEdit = { editingTask = task },
+                                    onDelete = { deletingTask = task }
+                                )
+                                if (index < filteredTasks.lastIndex) {
+                                    HorizontalDivider(color = Color(0x14FFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -200,8 +220,8 @@ fun TasksScreen(
             onDueDateChange = draftViewModel::setDueDate,
             assignedToId = draft.assignedTo,
             onAssignedChange = draftViewModel::setAssignee,
-            repeatType = draft.repeatType,
-            onRepeatChange = draftViewModel::setRepeat,
+            taskType = draft.taskType,
+            onTaskTypeChange = draftViewModel::setTaskType,
             isPriority = draft.isPriority,
             onPriorityChange = draftViewModel::setPriority,
             onDismiss = { draftViewModel.close() },
@@ -210,7 +230,8 @@ fun TasksScreen(
                     title = draft.title.trim(),
                     assignedTo = draft.assignedTo,
                     dueDate = draft.dueDate,
-                    repeatType = draft.repeatType,
+                    repeatType = if (draft.taskType == "daily") "daily" else "none",
+                    taskType = draft.taskType,
                     description = draft.description.trim().takeIf { it.isNotBlank() },
                     isPriority = draft.isPriority,
                     photoBytes = photoBytes
@@ -225,7 +246,7 @@ fun TasksScreen(
         var eDesc by rememberSaveable(task.id) { mutableStateOf(task.description ?: "") }
         var eDue by rememberSaveable(task.id) { mutableStateOf(task.dueDate) }
         var eAssignee by rememberSaveable(task.id) { mutableStateOf(task.assignedTo) }
-        var eRepeat by rememberSaveable(task.id) { mutableStateOf(task.repeatType) }
+        var eType by rememberSaveable(task.id) { mutableStateOf(task.taskType) }
         var ePriority by rememberSaveable(task.id) { mutableStateOf(task.isPriority) }
         AddTaskDialog(
             members = members,
@@ -239,8 +260,8 @@ fun TasksScreen(
             onDueDateChange = { eDue = it },
             assignedToId = eAssignee,
             onAssignedChange = { eAssignee = it },
-            repeatType = eRepeat,
-            onRepeatChange = { eRepeat = it },
+            taskType = eType,
+            onTaskTypeChange = { eType = it },
             isPriority = ePriority,
             onPriorityChange = { ePriority = it },
             onDismiss = { editingTask = null },
@@ -250,7 +271,8 @@ fun TasksScreen(
                     title = eTitle.trim(),
                     assignedTo = eAssignee,
                     dueDate = eDue,
-                    repeatType = eRepeat,
+                    repeatType = if (eType == "daily") "daily" else "none",
+                    taskType = eType,
                     description = eDesc.trim().takeIf { it.isNotBlank() },
                     isPriority = ePriority
                 )
@@ -624,8 +646,8 @@ fun AddTaskDialog(
     onDueDateChange: (String?) -> Unit,
     assignedToId: String?,
     onAssignedChange: (String?) -> Unit,
-    repeatType: String,
-    onRepeatChange: (String) -> Unit,
+    taskType: String,
+    onTaskTypeChange: (String) -> Unit,
     isPriority: Boolean,
     onPriorityChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
@@ -634,15 +656,14 @@ fun AddTaskDialog(
     var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAssigneeDropdown by remember { mutableStateOf(false) }
-    var showRepeatDropdown by remember { mutableStateOf(false) }
+    var showTypeDropdown by remember { mutableStateOf(false) }
     val pickPhoto = rememberPhotoPicker { photoBytes = it }
 
     val datePickerState = rememberDatePickerState()
-    val repeatOptions = listOf(
-        "none" to "Не повторяется",
-        "daily" to "Ежедневно",
-        "weekly" to "Еженедельно",
-        "monthly" to "Ежемесячно"
+    val typeOptions = listOf(
+        "current" to "Текущая",
+        "daily" to "Ежедневная",
+        "longterm" to "Долгосрочная"
     )
 
     if (showDatePicker) {
@@ -778,23 +799,23 @@ fun AddTaskDialog(
 
                 Box {
                     OutlinedButton(
-                        onClick = { showRepeatDropdown = true },
+                        onClick = { showTypeDropdown = true },
                         modifier = Modifier.fillMaxWidth(),
-                        border = BorderStroke(1.dp, if (repeatType != "none") Primary else Outline),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = if (repeatType != "none") Primary else Outline)
+                        border = BorderStroke(1.dp, Primary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
                     ) {
                         Icon(Icons.Outlined.Repeat, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(repeatOptions.find { it.first == repeatType }?.second ?: "Не повторяется")
+                        Text("Тип: " + (typeOptions.find { it.first == taskType }?.second ?: "Текущая"), modifier = Modifier.weight(1f))
                     }
                     DropdownMenu(
-                        expanded = showRepeatDropdown,
-                        onDismissRequest = { showRepeatDropdown = false }
+                        expanded = showTypeDropdown,
+                        onDismissRequest = { showTypeDropdown = false }
                     ) {
-                        repeatOptions.forEach { (value, label) ->
+                        typeOptions.forEach { (value, label) ->
                             DropdownMenuItem(
-                                text = { Text(label, color = if (repeatType == value) Primary else OnSurface) },
-                                onClick = { onRepeatChange(value); showRepeatDropdown = false }
+                                text = { Text(label, color = if (taskType == value) Primary else OnSurface) },
+                                onClick = { onTaskTypeChange(value); showTypeDropdown = false }
                             )
                         }
                     }
@@ -822,3 +843,80 @@ private fun taskFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedTextColor = OnSurface,
     cursorColor = Primary
 )
+
+@Composable
+private fun CompactTaskRow(
+    task: Task,
+    membersMap: Map<String, String>,
+    hasAttachment: Boolean,
+    onComplete: () -> Unit,
+    onUncomplete: () -> Unit,
+    onTogglePriority: () -> Unit,
+    onOpenComments: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val meta = buildList {
+        task.dueDate?.let { add(it) }
+        task.assignedTo?.let { membersMap[it]?.let { name -> add(name) } }
+        if (hasAttachment) add("📎")
+    }.joinToString("  ·  ")
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Чекбокс выполнения (в стиле списка покупок)
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(if (task.isCompleted) Primary.copy(alpha = 0.25f) else Color(0x14FFFFFF))
+                .border(1.dp, if (task.isCompleted) Primary else Color(0x40FFFFFF), RoundedCornerShape(7.dp))
+                .clickable { if (task.isCompleted) onUncomplete() else onComplete() },
+            contentAlignment = Alignment.Center
+        ) {
+            if (task.isCompleted) Icon(Icons.Outlined.Check, null, tint = Primary, modifier = Modifier.size(14.dp))
+        }
+
+        Spacer(Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f).clickable { onOpenComments() }) {
+            Text(
+                text = task.title,
+                color = if (task.isCompleted) Outline else Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
+            )
+            if (meta.isNotBlank()) {
+                Text(meta, color = OnSurfaceVariant, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+
+        IconSlot(onTogglePriority) {
+            Icon(
+                imageVector = if (task.isPriority) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                contentDescription = "Приоритет",
+                tint = if (task.isPriority) Secondary else Outline,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        IconSlot(onEdit) {
+            Icon(Icons.Outlined.Edit, contentDescription = "Изменить", tint = Outline, modifier = Modifier.size(17.dp))
+        }
+        IconSlot(onDelete) {
+            Icon(Icons.Outlined.DeleteOutline, contentDescription = "Удалить", tint = Outline, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+@Composable
+private fun IconSlot(onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.size(30.dp).clip(CircleShape).clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) { content() }
+}
