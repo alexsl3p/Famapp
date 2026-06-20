@@ -23,6 +23,10 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object NotificationSettings : Screen("notification_settings")
     object Appearance : Screen("appearance")
+    object Chat : Screen("chat/{otherId}/{otherName}") {
+        fun create(otherId: String, otherName: String): String =
+            "chat/$otherId/${android.net.Uri.encode(otherName)}"
+    }
 }
 
 data class BottomNavItem(

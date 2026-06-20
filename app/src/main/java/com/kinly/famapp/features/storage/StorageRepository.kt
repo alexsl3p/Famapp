@@ -27,8 +27,23 @@ class StorageRepository @Inject constructor(private val supabase: SupabaseClient
         return bucket.publicUrl(path)
     }
 
+    suspend fun uploadChatImage(familyId: String, bytes: ByteArray): String {
+        val path = "$familyId/${UUID.randomUUID()}.jpg"
+        val bucket = supabase.storage.from(BUCKET_CHAT)
+        bucket.upload(path, bytes) { upsert = false }
+        return bucket.publicUrl(path)
+    }
+
+    suspend fun uploadChatAudio(familyId: String, bytes: ByteArray): String {
+        val path = "$familyId/${UUID.randomUUID()}.m4a"
+        val bucket = supabase.storage.from(BUCKET_CHAT)
+        bucket.upload(path, bytes) { upsert = false }
+        return bucket.publicUrl(path)
+    }
+
     private companion object {
         const val BUCKET_AVATARS = "avatars"
         const val BUCKET_TASK_PHOTOS = "task-photos"
+        const val BUCKET_CHAT = "chat-media"
     }
 }

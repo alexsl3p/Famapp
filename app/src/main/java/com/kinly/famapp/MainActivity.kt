@@ -395,7 +395,27 @@ fun MainAppContent(
                 )
             }
             composable(Screen.Family.route) {
-                FamilyScreen(viewModel = familyViewModel, currentUserId = profile.id)
+                FamilyScreen(
+                    viewModel = familyViewModel,
+                    currentUserId = profile.id,
+                    onMessage = { member ->
+                        navController.navigate(Screen.Chat.create(member.userId, member.displayName))
+                    }
+                )
+            }
+            composable(Screen.Chat.route) { backStackEntry ->
+                val chatViewModel: com.kinly.famapp.features.chat.ChatViewModel = hiltViewModel()
+                val otherId = backStackEntry.arguments?.getString("otherId") ?: ""
+                val otherName = backStackEntry.arguments?.getString("otherName")
+                    ?.let { android.net.Uri.decode(it) } ?: ""
+                ChatScreen(
+                    viewModel = chatViewModel,
+                    familyId = familyId,
+                    meId = profile.id,
+                    otherId = otherId,
+                    otherName = otherName,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(Screen.Profile.route) {
                 ProfileScreen(

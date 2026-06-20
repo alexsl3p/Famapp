@@ -33,7 +33,8 @@ import com.kinly.famapp.ui.theme.*
 @Composable
 fun FamilyScreen(
     viewModel: FamilyViewModel,
-    currentUserId: String
+    currentUserId: String,
+    onMessage: (FamilyMember) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val clipboard = LocalClipboardManager.current
@@ -74,7 +75,11 @@ fun FamilyScreen(
             }
         } else {
             uiState.members.forEach { member ->
-                RealFamilyMemberCard(member = member, isCurrentUser = member.userId == currentUserId)
+                RealFamilyMemberCard(
+                    member = member,
+                    isCurrentUser = member.userId == currentUserId,
+                    onMessage = { onMessage(member) }
+                )
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -158,7 +163,7 @@ fun FamilyScreen(
 }
 
 @Composable
-fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean) {
+fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean, onMessage: () -> Unit = {}) {
     val memberColor = when (member.effectiveColor) {
         "purple" -> Primary
         "pink" -> Secondary
@@ -219,20 +224,23 @@ fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean) {
                 )
             }
 
-            Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(vertical = 16.dp))
+            if (!isCurrentUser) {
+                Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(vertical = 16.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0x0DFFFFFF))
-                        .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Outlined.Chat, contentDescription = null, tint = Primary, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Сообщение", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0x0DFFFFFF))
+                            .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(10.dp))
+                            .clickable { onMessage() }
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Outlined.Chat, contentDescription = null, tint = Primary, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Сообщение", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        }
                     }
                 }
             }

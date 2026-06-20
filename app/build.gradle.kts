@@ -23,8 +23,8 @@ android {
         applicationId = "com.kinly.famapp"
         minSdk = 26
         targetSdk = 34
-        versionCode = 33
-        versionName = "4.2"
+        versionCode = 34
+        versionName = "4.3"
         vectorDrawables {
             useSupportLibrary = true
         }
