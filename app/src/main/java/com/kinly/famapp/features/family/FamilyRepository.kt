@@ -40,13 +40,28 @@ class FamilyRepository @Inject constructor(private val supabase: SupabaseClient)
     }.getOrNull()
 
     suspend fun getMembers(familyId: String): List<FamilyMember> = runCatching {
-        supabase.postgrest["family_members"]
-            .select(io.github.jan.supabase.postgrest.query.Columns.raw(
-                "*, profiles!user_id(full_name, avatar_url, color)"
-            )) {
-                filter { eq("family_id", familyId) }
-            }
+        val members = supabase.postgrest["family_members"]
+            .select { filter { eq("family_id", familyId) } }
             .decodeList<FamilyMember>()
+        val ids = members.map { it.userId }
+        val profiles = if (ids.isNotEmpty()) {
+            runCatching {
+                supabase.postgrest["profiles"]
+                    .select { filter { isIn("id", ids) } }
+                    .decodeList<com.kinly.famapp.data.models.Profile>()
+            }.getOrElse { emptyList() }
+        } else emptyList()
+        val byId = profiles.associateBy { it.id }
+        members.map { m ->
+            val p = byId[m.userId]
+            if (p != null) m.copy(
+                profiles = FamilyMember.EmbeddedProfile(
+                    fullName = p.fullName,
+                    avatarUrl = p.avatarUrl,
+                    color = p.color
+                )
+            ) else m
+        }
     }.getOrElse { emptyList() }
 
     suspend fun regenerateInviteCode(familyId: String): String? = runCatching {
