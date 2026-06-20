@@ -208,14 +208,17 @@ fun TasksScreen(
     }
 
     if (draft.open) {
+        // Локальное состояние для мгновенного ввода (в DataStore синхронизируем в фоне).
+        var dTitle by rememberSaveable { mutableStateOf(draft.title) }
+        var dDesc by rememberSaveable { mutableStateOf(draft.description) }
         AddTaskDialog(
             members = members,
             currentUserId = currentUserId,
             isEdit = false,
-            title = draft.title,
-            onTitleChange = draftViewModel::setTitle,
-            description = draft.description,
-            onDescriptionChange = draftViewModel::setDescription,
+            title = dTitle,
+            onTitleChange = { dTitle = it; draftViewModel.setTitle(it) },
+            description = dDesc,
+            onDescriptionChange = { dDesc = it; draftViewModel.setDescription(it) },
             dueDate = draft.dueDate,
             onDueDateChange = draftViewModel::setDueDate,
             assignedToId = draft.assignedTo,
@@ -227,12 +230,12 @@ fun TasksScreen(
             onDismiss = { draftViewModel.close() },
             onConfirm = { photoBytes ->
                 viewModel.createTask(
-                    title = draft.title.trim(),
+                    title = dTitle.trim(),
                     assignedTo = draft.assignedTo,
                     dueDate = draft.dueDate,
                     repeatType = if (draft.taskType == "daily") "daily" else "none",
                     taskType = draft.taskType,
-                    description = draft.description.trim().takeIf { it.isNotBlank() },
+                    description = dDesc.trim().takeIf { it.isNotBlank() },
                     isPriority = draft.isPriority,
                     photoBytes = photoBytes
                 )
