@@ -186,25 +186,22 @@ fun TasksScreen(
             }
             }
 
-            // Кнопка добавления — всегда закреплена над нижней навигацией
+            // Кнопка добавления — большой «+» по центру (средняя треть), закреплён над навигацией
             if (uiState.filter != TaskFilter.COMPLETED) {
-                GlassCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { draftViewModel.open() }.padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
+                    Spacer(Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Brush.linearGradient(listOf(Primary, Secondary)))
+                            .clickable { draftViewModel.open() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Brush.linearGradient(listOf(Primary, Secondary))),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Add, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Text("Добавить задачу", color = OnSurface, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Icon(Icons.Filled.Add, contentDescription = "Добавить задачу", tint = Color(0xFF0B1326), modifier = Modifier.size(30.dp))
                     }
+                    Spacer(Modifier.weight(1f))
                 }
             }
         }

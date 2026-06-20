@@ -211,14 +211,12 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
 
         // Строка добавления товара — всегда закреплена над нижней навигацией
         if (currentList != null) {
-            GlassCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
-                InlineAddRow(
-                    products = productState.products,
-                    onAdd = { title, qty, productId ->
-                        viewModel.addItem(currentList.id, title, qty, productId = productId)
-                    }
-                )
-            }
+            InlineAddRow(
+                products = productState.products,
+                onAdd = { title, qty, productId ->
+                    viewModel.addItem(currentList.id, title, qty, productId = productId)
+                }
+            )
         }
     }
 
@@ -285,23 +283,24 @@ private fun InlineAddRow(
     }
 
     if (!adding) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable { hasFocused = false; adding = true }.padding(horizontal = 14.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // Большой «+» по центру (средняя треть)
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
+            Spacer(Modifier.weight(1f))
             Box(
                 modifier = Modifier
-                    .size(22.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(Brush.linearGradient(AccentGradient)),
+                    .weight(1f)
+                    .height(54.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Brush.linearGradient(AccentGradient))
+                    .clickable { hasFocused = false; adding = true },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Add, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(15.dp))
+                Icon(Icons.Filled.Add, contentDescription = "Добавить товар", tint = Color(0xFF0B1326), modifier = Modifier.size(30.dp))
             }
-            Spacer(Modifier.width(12.dp))
-            Text("Добавить товар", color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.weight(1f))
         }
     } else {
+        GlassCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Строка-черновик в том же виде, что и товар
             Row(
@@ -416,6 +415,7 @@ private fun InlineAddRow(
                     }
                 }
             }
+        }
         }
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
     }
