@@ -761,8 +761,12 @@ fun AddTaskDialog(
                     }
                 }
 
-                if (members.isNotEmpty()) {
-                    val assigneeName = members.find { it.userId == assignedToId }?.displayName ?: "Кому (необязательно)"
+                run {
+                    val assigneeName = when {
+                        assignedToId == null -> "Кому (необязательно)"
+                        assignedToId == currentUserId -> "Себе"
+                        else -> members.find { it.userId == assignedToId }?.displayName ?: "Назначена"
+                    }
                     Box {
                         OutlinedButton(
                             onClick = { showAssigneeDropdown = true },
@@ -782,14 +786,14 @@ fun AddTaskDialog(
                                 text = { Text("Не назначена", color = OnSurfaceVariant) },
                                 onClick = { onAssignedChange(null); showAssigneeDropdown = false }
                             )
-                            members.forEach { member ->
+                            // Всегда можно назначить себе
+                            DropdownMenuItem(
+                                text = { Text("Себе", color = if (assignedToId == currentUserId) Primary else OnSurface) },
+                                onClick = { onAssignedChange(currentUserId); showAssigneeDropdown = false }
+                            )
+                            members.filter { it.userId != currentUserId }.forEach { member ->
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            member.displayName + if (member.userId == currentUserId) " (Вы)" else "",
-                                            color = OnSurface
-                                        )
-                                    },
+                                    text = { Text(member.displayName, color = OnSurface) },
                                     onClick = { onAssignedChange(member.userId); showAssigneeDropdown = false }
                                 )
                             }
