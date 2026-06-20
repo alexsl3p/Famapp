@@ -92,14 +92,6 @@ fun WelcomeScreen(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            TextButton(onClick = onContinueAsGuest) {
-                Text(
-                    text = "Продолжить без входа (тест)",
-                    color = OnSurfaceVariant,
-                    fontSize = 14.sp
-                )
-            }
         }
     }
 }

@@ -53,6 +53,7 @@ class TasksViewModel @Inject constructor(
 
     private var currentFamilyId: String? = null
     private var currentUserId: String? = null
+    private var subscribed = false
 
     fun load(familyId: String, userId: String) {
         currentFamilyId = familyId
@@ -75,6 +76,8 @@ class TasksViewModel @Inject constructor(
     }
 
     private fun subscribeRealtime(familyId: String) {
+        if (subscribed) return
+        subscribed = true
         viewModelScope.launch {
             val channel = supabase.realtime.channel("tasks-$familyId")
             channel.postgresChangeFlow<PostgresAction>(schema = "public") {

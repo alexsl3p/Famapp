@@ -50,6 +50,7 @@ class ShoppingViewModel @Inject constructor(
     val uiState: StateFlow<ShoppingUiState> = _uiState.asStateFlow()
 
     private var currentFamilyId: String? = null
+    private var subscribed = false
 
     fun load(familyId: String) {
         currentFamilyId = familyId
@@ -82,6 +83,8 @@ class ShoppingViewModel @Inject constructor(
     }
 
     private fun subscribeRealtime(familyId: String) {
+        if (subscribed) return
+        subscribed = true
         viewModelScope.launch {
             val channel = supabase.realtime.channel("shopping-$familyId")
             channel.postgresChangeFlow<PostgresAction>(schema = "public") {
