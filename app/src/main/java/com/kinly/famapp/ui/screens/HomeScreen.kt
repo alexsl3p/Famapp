@@ -25,6 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import com.kinly.famapp.data.models.Task
 import com.kinly.famapp.features.family.FamilyViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
@@ -33,6 +36,7 @@ import com.kinly.famapp.ui.components.GlassButton
 import com.kinly.famapp.ui.components.GlassCard
 import com.kinly.famapp.ui.theme.*
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     tasksViewModel: TasksViewModel,
@@ -47,11 +51,10 @@ fun HomeScreen(
     val shoppingState by shoppingViewModel.uiState.collectAsState()
     val familyState by familyViewModel.uiState.collectAsState()
 
-    // Показываем только задачи с проставленной звёздочкой (приоритет).
-    // Если ни одна задача не отмечена — приоритетных нет, фолбэка на обычные задачи нет.
-    val priorityTask: Task? = tasksState.tasks.firstOrNull { it.isPriority && !it.isCompleted }
+    // Все приоритетные (со звёздочкой) активные задачи — листаются свайпом.
+    val priorityTasks = tasksState.tasks.filter { it.isPriority && !it.isCompleted }
     val activeTasks = tasksState.tasks.filter { !it.isCompleted }
-    val previewTasks = activeTasks.filter { it.id != priorityTask?.id }.take(4)
+    val previewTasks = activeTasks.filter { !it.isPriority }.take(4)
     val previewItems = shoppingState.items.filter { !it.isChecked }.take(3)
     val members = familyState.members
     val tasksLeft = tasksState.tasks.count { !it.isCompleted }
@@ -109,105 +112,23 @@ fun HomeScreen(
             modifier = Modifier.padding(bottom = 20.dp)
         )
 
-        // Priority Task Card
-        GlassCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .clickable { onOpenTasks() }
-        ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .background(
-                            Brush.linearGradient(colors = listOf(Primary.copy(alpha = 0.2f), Color.Transparent))
-                        )
+        // Priority Tasks — свайп между приоритетными задачами с индикатором 1/N
+        if (priorityTasks.isEmpty()) {
+            EmptyPriorityCard(onOpenTasks)
+        } else {
+            val pagerState = rememberPagerState(pageCount = { priorityTasks.size })
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                pageSpacing = 10.dp
+            ) { page ->
+                val task = priorityTasks[page]
+                PriorityCard(
+                    task = task,
+                    pageLabel = if (priorityTasks.size > 1) "${page + 1}/${priorityTasks.size}" else null,
+                    onComplete = { tasksViewModel.completeTask(task.id) },
+                    onOpenTasks = onOpenTasks
                 )
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Star,
-                                contentDescription = null,
-                                tint = Primary,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .background(Primary.copy(alpha = 0.2f), CircleShape)
-                                    .padding(2.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "ПРИОРИТЕТ",
-                                color = Primary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                        if (priorityTask?.dueDate != null) {
-                            Box(
-                                modifier = Modifier
-                                    .background(Secondary.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-                                    .border(1.dp, Secondary.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = priorityTask.dueDate,
-                                    color = Secondary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                    Text(
-                        text = priorityTask?.title ?: "Нет приоритетных задач",
-                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
-                        color = OnSurface,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    if (priorityTask?.description != null) {
-                        Text(
-                            text = priorityTask.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = OnSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                    } else if (priorityTask == null) {
-                        Text(
-                            text = "Отметьте задачу звёздочкой, чтобы она появилась здесь.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = OnSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                    }
-                    if (priorityTask != null) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(
-                                    Brush.horizontalGradient(listOf(Primary, Secondary)),
-                                    RoundedCornerShape(20.dp)
-                                )
-                                .clickable { tasksViewModel.completeTask(priorityTask.id) }
-                                .padding(horizontal = 20.dp, vertical = 10.dp)
-                        ) {
-                            Text(
-                                text = "Выполнить",
-                                color = Color(0xFF0B1326),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-                }
             }
         }
 
@@ -439,4 +360,120 @@ private fun StatDivider() {
             .fillMaxHeight()
             .background(Color(0x1FFFFFFF))
     )
+}
+
+@Composable
+private fun PriorityCard(
+    task: Task,
+    pageLabel: String?,
+    onComplete: () -> Unit,
+    onOpenTasks: () -> Unit
+) {
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onOpenTasks() }
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(Brush.linearGradient(listOf(Primary.copy(alpha = 0.2f), Color.Transparent)))
+            )
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp).background(Primary.copy(alpha = 0.2f), CircleShape).padding(2.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("ПРИОРИТЕТ", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+                        if (pageLabel != null) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(pageLabel, color = OnSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    if (task.dueDate != null) {
+                        Box(
+                            modifier = Modifier
+                                .background(Secondary.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                                .border(1.dp, Secondary.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Text(task.dueDate, color = Secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
+                    color = OnSurface,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                if (!task.description.isNullOrBlank()) {
+                    Text(
+                        text = task.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                } else {
+                    Spacer(Modifier.height(16.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Brush.horizontalGradient(listOf(Primary, Secondary)), RoundedCornerShape(20.dp))
+                        .clickable { onComplete() }
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    Text("Выполнить", color = Color(0xFF0B1326), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyPriorityCard(onOpenTasks: () -> Unit) {
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onOpenTasks() }
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.Star,
+                    contentDescription = null,
+                    tint = Primary,
+                    modifier = Modifier.size(20.dp).background(Primary.copy(alpha = 0.2f), CircleShape).padding(2.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("ПРИОРИТЕТ", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+            }
+            Text(
+                "Нет приоритетных задач",
+                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
+                color = OnSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                "Отметьте задачу звёздочкой, чтобы она появилась здесь.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnSurfaceVariant
+            )
+        }
+    }
 }
