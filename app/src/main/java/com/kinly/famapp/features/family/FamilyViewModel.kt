@@ -5,9 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.kinly.famapp.data.models.Family
 import com.kinly.famapp.data.models.FamilyMember
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,18 +29,45 @@ data class FamilyUiState(
 
 @HiltViewModel
 class FamilyViewModel @Inject constructor(
-    private val familyRepository: FamilyRepository
+    private val familyRepository: FamilyRepository,
+    private val supabase: SupabaseClient
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FamilyUiState())
     val uiState: StateFlow<FamilyUiState> = _uiState.asStateFlow()
 
+    private var currentFamilyId: String? = null
+    private var subscribed = false
+
     fun load(familyId: String) {
+        currentFamilyId = familyId
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val family = familyRepository.getFamily(familyId)
             val members = familyRepository.getMembers(familyId)
-            _uiState.value = FamilyUiState(family = family, members = members, isLoading = false)
+            _uiState.value = _uiState.value.copy(family = family, members = members, isLoading = false)
+            subscribeRealtime(familyId)
+        }
+    }
+
+    /** Перечитать участников (например, при открытии вкладки «Семья»). */
+    fun reload() {
+        val familyId = currentFamilyId ?: return
+        viewModelScope.launch {
+            val members = familyRepository.getMembers(familyId)
+            _uiState.value = _uiState.value.copy(members = members)
+        }
+    }
+
+    private fun subscribeRealtime(familyId: String) {
+        if (subscribed) return
+        subscribed = true
+        viewModelScope.launch {
+            val channel = supabase.realtime.channel("family-members-$familyId")
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "family_members"
+            }.onEach { reload() }.launchIn(this)
+            channel.subscribe()
         }
     }
 

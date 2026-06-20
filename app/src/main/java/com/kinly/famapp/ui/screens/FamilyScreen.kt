@@ -38,6 +38,9 @@ fun FamilyScreen(
     val uiState by viewModel.uiState.collectAsState()
     val clipboard = LocalClipboardManager.current
 
+    // Обновляем состав семьи при каждом открытии вкладки.
+    LaunchedEffect(Unit) { viewModel.reload() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
