@@ -186,22 +186,22 @@ fun TasksScreen(
             }
             }
 
-            // Кнопка добавления — большой «+» по центру (средняя треть), закреплён над навигацией
+            // Кнопка добавления — компактный «+» по центру, закреплён над навигацией
             if (uiState.filter != TaskFilter.COMPLETED) {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
-                    Spacer(Modifier.weight(1f))
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 4.dp)) {
+                    Spacer(Modifier.weight(1.3f))
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(54.dp)
-                            .clip(RoundedCornerShape(18.dp))
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(16.dp))
                             .background(Brush.linearGradient(listOf(Primary, Secondary)))
                             .clickable { draftViewModel.open() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = "Добавить задачу", tint = Color(0xFF0B1326), modifier = Modifier.size(30.dp))
+                        Icon(Icons.Filled.Add, contentDescription = "Добавить задачу", tint = Color(0xFF0B1326), modifier = Modifier.size(24.dp))
                     }
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.weight(1.3f))
                 }
             }
         }

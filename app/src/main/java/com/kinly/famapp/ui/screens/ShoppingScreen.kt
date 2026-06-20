@@ -283,21 +283,21 @@ private fun InlineAddRow(
     }
 
     if (!adding) {
-        // Большой «+» по центру (средняя треть)
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
-            Spacer(Modifier.weight(1f))
+        // Компактный «+» по центру
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 4.dp)) {
+            Spacer(Modifier.weight(1.3f))
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(54.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(Brush.linearGradient(AccentGradient))
                     .clickable { hasFocused = false; adding = true },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Добавить товар", tint = Color(0xFF0B1326), modifier = Modifier.size(30.dp))
+                Icon(Icons.Filled.Add, contentDescription = "Добавить товар", tint = Color(0xFF0B1326), modifier = Modifier.size(24.dp))
             }
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.weight(1.3f))
         }
     } else {
         GlassCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {

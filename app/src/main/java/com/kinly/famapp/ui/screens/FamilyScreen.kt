@@ -58,53 +58,27 @@ fun FamilyScreen(
             modifier = Modifier.padding(bottom = 20.dp)
         )
 
-        // Invite code card
-        val inviteCode = uiState.family?.inviteCode
-        if (inviteCode != null) {
-            GlassCard(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Код приглашения", color = OnSurfaceVariant, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = inviteCode,
-                            color = Primary,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 4.sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0x0DFFFFFF))
-                                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(10.dp))
-                                .clickable {
-                                    clipboard.setText(AnnotatedString(inviteCode))
-                                }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Outlined.ContentCopy, contentDescription = null, tint = Primary, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Копировать", color = Primary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(
-                        onClick = { viewModel.regenerateCode() },
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Text("Обновить код", color = OnSurfaceVariant, fontSize = 13.sp)
-                    }
+        // 1) Участники семьи
+        if (uiState.isLoading) {
+            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Primary)
+            }
+        } else if (uiState.members.isEmpty()) {
+            GlassCard(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text("Участники загружаются...", color = OnSurfaceVariant)
                 }
+            }
+        } else {
+            uiState.members.forEach { member ->
+                RealFamilyMemberCard(member = member, isCurrentUser = member.userId == currentUserId)
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
 
-        // Приглашение по email
+        Spacer(Modifier.height(8.dp))
+
+        // 2) Пригласить по email
         var inviteEmail by remember { mutableStateOf("") }
         LaunchedEffect(uiState.inviteMessage) {
             if (uiState.inviteMessage?.startsWith("Приглашение отправлено") == true) inviteEmail = ""
@@ -145,52 +119,36 @@ fun FamilyScreen(
             }
         }
 
-        if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Primary)
-            }
-        } else if (uiState.members.isEmpty()) {
-            GlassCard(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text("Участники загружаются...", color = OnSurfaceVariant)
+        // 3) Код приглашения (для тех, кто ещё не зарегистрирован — вводят его при входе)
+        val inviteCode = uiState.family?.inviteCode
+        if (inviteCode != null) {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Или по коду приглашения", color = OnSurfaceVariant, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(inviteCode, color = Primary, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0x0DFFFFFF))
+                                    .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(10.dp))
+                                    .clickable { clipboard.setText(AnnotatedString(inviteCode)) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Icon(Icons.Outlined.ContentCopy, contentDescription = "Копировать", tint = Primary, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(Modifier.width(6.dp))
+                            TextButton(onClick = { viewModel.regenerateCode() }, contentPadding = PaddingValues(horizontal = 6.dp)) {
+                                Text("Обновить", color = OnSurfaceVariant, fontSize = 12.sp)
+                            }
+                        }
+                    }
                 }
-            }
-        } else {
-            uiState.members.forEach { member ->
-                RealFamilyMemberCard(member = member, isCurrentUser = member.userId == currentUserId)
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-
-        // Invite Member card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0x0DFFFFFF))
-                .border(width = 2.dp, color = Primary.copy(alpha = 0.4f), shape = RoundedCornerShape(16.dp))
-                .padding(vertical = 32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(Primary.copy(alpha = 0.2f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = null, tint = Primary, modifier = Modifier.size(28.dp))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (inviteCode != null)
-                        "Поделитесь кодом: $inviteCode"
-                    else
-                        "Пригласить участника",
-                    color = Primary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
             }
         }
     }
