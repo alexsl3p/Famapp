@@ -858,9 +858,9 @@ private fun CompactTaskRow(
 ) {
     val meta = buildList {
         task.dueDate?.let { add(it) }
-        task.assignedTo?.let { membersMap[it]?.let { name -> add(name) } }
         if (hasAttachment) add("📎")
     }.joinToString("  ·  ")
+    val assigneeName = task.assignedTo?.let { membersMap[it] }
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 9.dp),
@@ -887,13 +887,35 @@ private fun CompactTaskRow(
                 color = if (task.isCompleted) Outline else Color.White,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
             )
             if (meta.isNotBlank()) {
                 Text(meta, color = OnSurfaceVariant, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+        }
+
+        Spacer(Modifier.width(6.dp))
+
+        // Аватар исполнителя (кому назначена)
+        if (assigneeName != null) {
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(SurfaceVariant)
+                    .border(1.dp, Color(0x33FFFFFF), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = assigneeName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                    color = OnSurfaceVariant,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(Modifier.width(2.dp))
         }
 
         IconSlot(onTogglePriority) {
