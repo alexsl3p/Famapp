@@ -157,8 +157,7 @@ fun KinlyApp(
                         client.signOut().addOnCompleteListener {
                             googleSignInLauncher.launch(client.signInIntent)
                         }
-                    },
-                    onContinueAsGuest = { authViewModel.signInAsGuest() }
+                    }
                 )
             }
             is AuthState.NeedsFamily -> {

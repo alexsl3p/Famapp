@@ -23,7 +23,6 @@ import com.kinly.famapp.ui.theme.Secondary
 @Composable
 fun WelcomeScreen(
     onSignInWithGoogle: () -> Unit,
-    onContinueAsGuest: () -> Unit = {},
     isLoading: Boolean = false,
     errorMessage: String? = null
 ) {
