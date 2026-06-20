@@ -94,18 +94,20 @@ fun KinlyTopBar(
                 if (unreadCount > 0) {
                     Box(
                         modifier = Modifier
-                            .offset(x = 5.dp, y = (-3).dp)
-                            .size(16.dp)
+                            .offset(x = 7.dp, y = (-5).dp)
+                            .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
                             .clip(CircleShape)
                             .background(Color(0xFFFF4D6D))
-                            .border(1.5.dp, Color(0xFF0B1326), CircleShape),
+                            .border(2.dp, Color(0xFF0B1326), CircleShape)
+                            .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                            text = if (unreadCount > 99) "99+" else unreadCount.toString(),
                             color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
                         )
                     }
                 }
