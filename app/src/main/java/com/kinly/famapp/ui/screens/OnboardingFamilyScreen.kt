@@ -147,7 +147,7 @@ fun OnboardingFamilyScreen(
                         Text("Код приглашения", color = OnSurfaceVariant, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
                         OutlinedTextField(
                             value = inviteCode,
-                            onValueChange = { if (it.length <= 8) inviteCode = it.uppercase() },
+                            onValueChange = { if (it.length <= 12) inviteCode = it.uppercase().trim() },
                             placeholder = { Text("A7K9Q2PM", color = Outline) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -173,7 +173,7 @@ fun OnboardingFamilyScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         TextButton(
-                            onClick = { if (inviteCode.length == 8) onJoinFamily(inviteCode) },
+                            onClick = { if (inviteCode.trim().length >= 4) onJoinFamily(inviteCode.trim()) },
                             modifier = Modifier.fillMaxSize()
                         ) {
                             Text("Вступить", color = Color(0xFF0B1326), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
