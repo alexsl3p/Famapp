@@ -65,10 +65,12 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     // Раздел, который надо открыть по тапу на виджет ("shopping"/"tasks").
     private val pendingOpenTab = mutableStateOf<String?>(null)
+    private val pendingVoice = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingOpenTab.value = intent?.getStringExtra("open_tab")
+        pendingVoice.value = intent?.getBooleanExtra("start_voice", false) == true
         enableEdgeToEdge()
         setContent {
             val appearanceViewModel: AppearanceViewModel = hiltViewModel()
@@ -76,7 +78,9 @@ class MainActivity : ComponentActivity() {
             FamAppTheme(fontThemeId = fontThemeId) {
                 KinlyApp(
                     requestedTab = pendingOpenTab.value,
-                    onTabConsumed = { pendingOpenTab.value = null }
+                    onTabConsumed = { pendingOpenTab.value = null },
+                    requestVoice = pendingVoice.value,
+                    onVoiceConsumed = { pendingVoice.value = false }
                 )
             }
         }
@@ -86,13 +90,16 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         pendingOpenTab.value = intent.getStringExtra("open_tab")
+        pendingVoice.value = intent.getBooleanExtra("start_voice", false)
     }
 }
 
 @Composable
 fun KinlyApp(
     requestedTab: String? = null,
-    onTabConsumed: () -> Unit = {}
+    onTabConsumed: () -> Unit = {},
+    requestVoice: Boolean = false,
+    onVoiceConsumed: () -> Unit = {}
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
@@ -184,7 +191,9 @@ fun KinlyApp(
                     profile = state.profile,
                     authViewModel = authViewModel,
                     requestedTab = requestedTab,
-                    onTabConsumed = onTabConsumed
+                    onTabConsumed = onTabConsumed,
+                    requestVoice = requestVoice,
+                    onVoiceConsumed = onVoiceConsumed
                 )
             }
         }
@@ -196,7 +205,9 @@ fun MainAppContent(
     profile: com.kinly.famapp.data.models.Profile,
     authViewModel: AuthViewModel,
     requestedTab: String? = null,
-    onTabConsumed: () -> Unit = {}
+    onTabConsumed: () -> Unit = {},
+    requestVoice: Boolean = false,
+    onVoiceConsumed: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -248,6 +259,14 @@ fun MainAppContent(
     val snackbarHostState = remember { SnackbarHostState() }
     val voiceScope = rememberCoroutineScope()
     var showVoiceDialog by remember { mutableStateOf(false) }
+
+    // Голосовой ввод, запрошенный из виджета (микрофон).
+    LaunchedEffect(requestVoice) {
+        if (requestVoice) {
+            showVoiceDialog = true
+            onVoiceConsumed()
+        }
+    }
 
     val handleVoiceResult: (String) -> Unit = { spoken ->
         when (val cmd = VoiceCommandParser.parse(spoken)) {

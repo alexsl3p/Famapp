@@ -26,6 +26,12 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import androidx.glance.GlanceId
+import androidx.glance.action.ActionParameters
+import androidx.glance.appwidget.action.ActionCallback
 import java.util.concurrent.TimeUnit
 
 object WidgetWork {
@@ -54,6 +60,40 @@ interface WidgetEntryPoint {
     fun supabase(): SupabaseClient
 }
 
+/** Отметить товар купленным / задачу выполненной прямо из виджета. */
+class ToggleItemAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val id = parameters[ItemIdKey] ?: return
+        val kind = parameters[ItemKindKey] ?: return
+        val supabase = EntryPointAccessors
+            .fromApplication(context, WidgetEntryPoint::class.java)
+            .supabase()
+        runCatching {
+            supabase.auth.awaitInitialization()
+            if (supabase.auth.currentSessionOrNull() == null) return
+            if (kind == "task") {
+                supabase.postgrest.rpc("complete_task", buildJsonObject { put("p_task_id", id) })
+            } else {
+                supabase.postgrest.rpc("mark_shopping_item_checked", buildJsonObject {
+                    put("p_item_id", id); put("p_checked", true)
+                })
+            }
+            val familyId = WidgetData.readFamilyId(context)
+            if (familyId != null) {
+                val shopping = supabase.postgrest["shopping_items"].select {
+                    filter { eq("family_id", familyId); eq("is_checked", false) }
+                }.decodeList<ShoppingItem>()
+                val tasks = supabase.postgrest["tasks"].select {
+                    filter { eq("family_id", familyId); eq("is_completed", false) }
+                }.decodeList<Task>()
+                WidgetData.writeShopping(context, shopping.map { WidgetItem(it.id, it.title) })
+                WidgetData.writeTasks(context, tasks.map { WidgetItem(it.id, it.title) })
+            }
+        }
+        FamilyWidget().updateAll(context)
+    }
+}
+
 /** Фоновое обновление снимка виджета из Supabase (по расписанию, без открытия приложения). */
 class WidgetRefreshWorker(
     appContext: Context,
@@ -79,8 +119,8 @@ class WidgetRefreshWorker(
             val tasks = supabase.postgrest["tasks"].select {
                 filter { eq("family_id", familyId); eq("is_completed", false) }
             }.decodeList<Task>()
-            WidgetData.writeShopping(ctx, shopping.map { it.title })
-            WidgetData.writeTasks(ctx, tasks.map { it.title })
+            WidgetData.writeShopping(ctx, shopping.map { WidgetItem(it.id, it.title) })
+            WidgetData.writeTasks(ctx, tasks.map { WidgetItem(it.id, it.title) })
             FamilyWidget().updateAll(ctx)
 
             // 2) Новые уведомления -> в шторку телефона

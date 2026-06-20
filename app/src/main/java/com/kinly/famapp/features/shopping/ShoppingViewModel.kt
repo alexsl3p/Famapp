@@ -108,7 +108,9 @@ class ShoppingViewModel @Inject constructor(
 
     /** Кладёт активные (некупленные) товары в снимок виджета. */
     private fun pushWidget(items: List<ShoppingItem>) {
-        widgetUpdater.updateShopping(items.filter { !it.isChecked }.map { it.title })
+        widgetUpdater.updateShopping(
+            items.filter { !it.isChecked }.map { com.kinly.famapp.widget.WidgetItem(it.id, it.title) }
+        )
     }
 
     private suspend fun saveToCache(items: List<ShoppingItem>) {

@@ -2,11 +2,14 @@ package com.kinly.famapp.widget
 
 import android.content.Context
 
+/** Позиция виджета: id (для отметки) + название. */
+data class WidgetItem(val id: String, val title: String)
+
 /** Снимок данных для виджета — общий между приложением и виджетом (SharedPreferences). */
 data class WidgetSnapshot(
     val mode: String = "shopping", // "shopping" | "tasks"
-    val shopping: List<String> = emptyList(),
-    val tasks: List<String> = emptyList()
+    val shopping: List<WidgetItem> = emptyList(),
+    val tasks: List<WidgetItem> = emptyList()
 )
 
 object WidgetData {
@@ -17,16 +20,27 @@ object WidgetData {
     private const val K_FAMILY = "family_id"
     private const val K_USER = "user_id"
     private const val K_LAST_SEEN = "notif_last_seen"
+    private const val SEP = "" // разделитель id/title
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    private fun encode(items: List<WidgetItem>): String =
+        items.joinToString("\n") { it.id + SEP + it.title }
+
+    private fun decode(raw: String?): List<WidgetItem> =
+        raw.orEmpty().lines().filter { it.isNotBlank() }.mapNotNull { line ->
+            val i = line.indexOf(SEP)
+            if (i >= 0) WidgetItem(line.substring(0, i), line.substring(i + 1))
+            else WidgetItem("", line) // обратная совместимость со старым форматом
+        }
 
     fun read(context: Context): WidgetSnapshot {
         val p = prefs(context)
         return WidgetSnapshot(
             mode = p.getString(K_MODE, "shopping") ?: "shopping",
-            shopping = p.getString(K_SHOPPING, "").orEmpty().lines().filter { it.isNotBlank() },
-            tasks = p.getString(K_TASKS, "").orEmpty().lines().filter { it.isNotBlank() }
+            shopping = decode(p.getString(K_SHOPPING, "")),
+            tasks = decode(p.getString(K_TASKS, ""))
         )
     }
 
@@ -48,12 +62,12 @@ object WidgetData {
         prefs(context).edit().putString(K_LAST_SEEN, iso).apply()
     }
 
-    fun writeShopping(context: Context, items: List<String>) {
-        prefs(context).edit().putString(K_SHOPPING, items.joinToString("\n")).apply()
+    fun writeShopping(context: Context, items: List<WidgetItem>) {
+        prefs(context).edit().putString(K_SHOPPING, encode(items)).apply()
     }
 
-    fun writeTasks(context: Context, items: List<String>) {
-        prefs(context).edit().putString(K_TASKS, items.joinToString("\n")).apply()
+    fun writeTasks(context: Context, items: List<WidgetItem>) {
+        prefs(context).edit().putString(K_TASKS, encode(items)).apply()
     }
 
     fun toggleMode(context: Context) {

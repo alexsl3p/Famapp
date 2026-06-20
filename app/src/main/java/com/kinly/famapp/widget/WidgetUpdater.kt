@@ -26,12 +26,12 @@ class WidgetUpdater @Inject constructor(
         WidgetData.writeUserId(context, userId)
     }
 
-    fun updateShopping(items: List<String>) {
+    fun updateShopping(items: List<WidgetItem>) {
         WidgetData.writeShopping(context, items)
         refresh()
     }
 
-    fun updateTasks(items: List<String>) {
+    fun updateTasks(items: List<WidgetItem>) {
         WidgetData.writeTasks(context, items)
         refresh()
     }

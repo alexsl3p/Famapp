@@ -15,6 +15,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.CheckBox
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
@@ -30,6 +31,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -71,6 +73,17 @@ private fun WidgetContent(data: WidgetSnapshot) {
                 style = TextStyle(color = ColorProvider(accent), fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 modifier = GlanceModifier.defaultWeight()
             )
+            // Микрофон — открыть приложение и сразу голосовой ввод
+            Text(
+                text = "🎤",
+                style = TextStyle(fontSize = 14.sp),
+                modifier = GlanceModifier
+                    .background(Color(0x33D2BBFF))
+                    .cornerRadius(10.dp)
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .clickable(actionStartActivity<MainActivity>(actionParametersOf(StartVoiceKey to true)))
+            )
+            Spacer(GlanceModifier.width(6.dp))
             Text(
                 text = if (isTasks) "→ Покупки" else "→ Задачи",
                 style = TextStyle(color = ColorProvider(white), fontSize = 12.sp, fontWeight = FontWeight.Medium),
@@ -90,14 +103,18 @@ private fun WidgetContent(data: WidgetSnapshot) {
                 style = TextStyle(color = ColorProvider(muted), fontSize = 13.sp)
             )
         } else {
+            val kind = if (isTasks) "task" else "shopping"
             LazyColumn {
-                items(items) { line ->
-                    Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text(
-                            text = "•  $line",
-                            style = TextStyle(color = ColorProvider(white), fontSize = 14.sp)
-                        )
-                    }
+                items(items, itemId = { it.id.hashCode().toLong() }) { item ->
+                    CheckBox(
+                        checked = false,
+                        onCheckedChange = actionRunCallback<ToggleItemAction>(
+                            actionParametersOf(ItemIdKey to item.id, ItemKindKey to kind)
+                        ),
+                        text = item.title,
+                        style = TextStyle(color = ColorProvider(white), fontSize = 14.sp),
+                        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 3.dp)
+                    )
                 }
             }
         }
@@ -106,6 +123,11 @@ private fun WidgetContent(data: WidgetSnapshot) {
 
 /** Ключ параметра «какой раздел открыть» — приходит в Activity как intent extra "open_tab". */
 val OpenTabKey = ActionParameters.Key<String>("open_tab")
+/** Открыть приложение сразу с голосовым вводом. */
+val StartVoiceKey = ActionParameters.Key<Boolean>("start_voice")
+/** Параметры отметки позиции из виджета. */
+val ItemIdKey = ActionParameters.Key<String>("item_id")
+val ItemKindKey = ActionParameters.Key<String>("item_kind")
 
 /** Переключение Покупки ↔ Задачи прямо в виджете. */
 class ToggleModeAction : ActionCallback {

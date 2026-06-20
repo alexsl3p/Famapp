@@ -72,7 +72,9 @@ class TasksViewModel @Inject constructor(
         val tasks = tasksRepository.getTasks(familyId)
         val attachments = tasksRepository.getTaskIdsWithAttachments(familyId)
         _uiState.value = _uiState.value.copy(tasks = tasks, attachmentTaskIds = attachments, isLoading = false)
-        widgetUpdater.updateTasks(tasks.filter { !it.isCompleted }.map { it.title })
+        widgetUpdater.updateTasks(
+            tasks.filter { !it.isCompleted }.map { com.kinly.famapp.widget.WidgetItem(it.id, it.title) }
+        )
     }
 
     private fun subscribeRealtime(familyId: String) {
