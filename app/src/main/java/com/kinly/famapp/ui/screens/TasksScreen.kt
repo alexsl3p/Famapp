@@ -99,14 +99,15 @@ fun TasksScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Transparent
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-                .padding(top = 20.dp, bottom = 100.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 20.dp, bottom = 12.dp)
+            ) {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                 Text(text = "Задачи семьи", style = MaterialTheme.typography.headlineSmall, color = Color.White)
                 Text(
@@ -182,25 +183,27 @@ fun TasksScreen(
                     }
                 }
 
-                // Кнопка добавления — как «Добавить товар» в покупках
-                if (uiState.filter != TaskFilter.COMPLETED) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable { draftViewModel.open() }.padding(horizontal = 14.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
+            }
+            }
+
+            // Кнопка добавления — всегда закреплена над нижней навигацией
+            if (uiState.filter != TaskFilter.COMPLETED) {
+                GlassCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { draftViewModel.open() }.padding(horizontal = 14.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Brush.linearGradient(listOf(Primary, Secondary))),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Brush.linearGradient(listOf(Primary, Secondary))),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(16.dp))
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Text("Добавить задачу", color = OnSurface, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Icon(Icons.Filled.Add, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(16.dp))
                         }
+                        Spacer(Modifier.width(12.dp))
+                        Text("Добавить задачу", color = OnSurface, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }

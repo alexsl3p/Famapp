@@ -91,10 +91,15 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
             .fillMaxSize()
             // Тап в любом пустом месте снимает фокус → черновик товара сохраняется.
             .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
-            .padding(top = 20.dp, bottom = 120.dp)
     ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(top = 20.dp, bottom = 12.dp)
+        ) {
         Text(
             text = "Списки покупок",
             style = MaterialTheme.typography.headlineMedium.copy(fontSize = 23.sp),
@@ -188,14 +193,6 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                         }
                     }
 
-                    Divider(color = Color(0x1AFFFFFF))
-                    InlineAddRow(
-                        products = productState.products,
-                        onAdd = { title, qty, productId ->
-                            viewModel.addItem(currentList.id, title, qty, productId = productId)
-                        }
-                    )
-
                     if (items.any { it.isChecked }) {
                         Divider(color = Color(0x1AFFFFFF))
                         Row(
@@ -208,6 +205,19 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                         }
                     }
                 }
+            }
+        }
+        }
+
+        // Строка добавления товара — всегда закреплена над нижней навигацией
+        if (currentList != null) {
+            GlassCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
+                InlineAddRow(
+                    products = productState.products,
+                    onAdd = { title, qty, productId ->
+                        viewModel.addItem(currentList.id, title, qty, productId = productId)
+                    }
+                )
             }
         }
     }

@@ -65,4 +65,30 @@ class FamilyRepository @Inject constructor(private val supabase: SupabaseClient)
             )
         }
     }
+
+    /** Приглашение по email. Возвращает "ok" | "user_not_found" | "already_member" | "error". */
+    suspend fun inviteByEmail(familyId: String, email: String): String = runCatching {
+        val result = supabase.postgrest.rpc(
+            "invite_to_family",
+            buildJsonObject { put("p_family_id", familyId); put("p_email", email) }
+        )
+        result.data.trim().trim('"')
+    }.getOrElse { "error" }
+
+    suspend fun acceptInvite(familyId: String): Boolean = runCatching {
+        supabase.postgrest.rpc(
+            "accept_family_invite",
+            buildJsonObject { put("p_family_id", familyId) }
+        )
+        true
+    }.getOrElse { false }
+
+    suspend fun declineInvite(familyId: String) {
+        runCatching {
+            supabase.postgrest.rpc(
+                "decline_family_invite",
+                buildJsonObject { put("p_family_id", familyId) }
+            )
+        }
+    }
 }

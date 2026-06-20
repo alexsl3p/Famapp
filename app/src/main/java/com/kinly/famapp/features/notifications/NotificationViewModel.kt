@@ -125,6 +125,22 @@ class NotificationViewModel @Inject constructor(
         viewModelScope.launch { repository.markAllRead(uid) }
     }
 
+    /** Принять приглашение в семью; onAccepted вызывается для обновления профиля. */
+    fun acceptInvite(familyId: String, onAccepted: () -> Unit) {
+        viewModelScope.launch {
+            val ok = repository.acceptFamilyInvite(familyId)
+            refresh()
+            if (ok) onAccepted()
+        }
+    }
+
+    fun declineInvite(familyId: String) {
+        viewModelScope.launch {
+            repository.declineFamilyInvite(familyId)
+            refresh()
+        }
+    }
+
     fun clearAll() {
         val uid = userId ?: return
         rawList = emptyList()

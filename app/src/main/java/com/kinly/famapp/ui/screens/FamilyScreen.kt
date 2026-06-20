@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -99,6 +100,47 @@ fun FamilyScreen(
                     ) {
                         Text("Обновить код", color = OnSurfaceVariant, fontSize = 13.sp)
                     }
+                }
+            }
+        }
+
+        // Приглашение по email
+        var inviteEmail by remember { mutableStateOf("") }
+        LaunchedEffect(uiState.inviteMessage) {
+            if (uiState.inviteMessage?.startsWith("Приглашение отправлено") == true) inviteEmail = ""
+        }
+        GlassCard(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("Пригласить по email", color = OnSurfaceVariant, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
+                OutlinedTextField(
+                    value = inviteEmail,
+                    onValueChange = { inviteEmail = it },
+                    placeholder = { Text("email@пример.com", color = Outline) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Primary,
+                        unfocusedBorderColor = Outline,
+                        focusedTextColor = OnSurface,
+                        unfocusedTextColor = OnSurface,
+                        cursorColor = Primary
+                    )
+                )
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.linearGradient(listOf(Primary, Secondary)))
+                        .clickable(enabled = !uiState.isInviting && inviteEmail.isNotBlank()) { viewModel.inviteByEmail(inviteEmail) }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(if (uiState.isInviting) "Отправка…" else "Отправить приглашение", color = Color(0xFF0B1326), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                }
+                if (uiState.inviteMessage != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(uiState.inviteMessage!!, color = OnSurfaceVariant, fontSize = 13.sp)
                 }
             }
         }

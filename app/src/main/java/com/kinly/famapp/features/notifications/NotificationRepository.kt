@@ -4,6 +4,7 @@ import com.kinly.famapp.data.models.Notification
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.rpc
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
@@ -40,6 +41,23 @@ class NotificationRepository @Inject constructor(private val supabase: SupabaseC
             supabase.postgrest["notifications"].delete {
                 filter { eq("user_id", userId) }
             }
+        }
+    }
+
+    suspend fun acceptFamilyInvite(familyId: String): Boolean = runCatching {
+        supabase.postgrest.rpc(
+            "accept_family_invite",
+            buildJsonObject { put("p_family_id", familyId) }
+        )
+        true
+    }.getOrElse { false }
+
+    suspend fun declineFamilyInvite(familyId: String) {
+        runCatching {
+            supabase.postgrest.rpc(
+                "decline_family_invite",
+                buildJsonObject { put("p_family_id", familyId) }
+            )
         }
     }
 }

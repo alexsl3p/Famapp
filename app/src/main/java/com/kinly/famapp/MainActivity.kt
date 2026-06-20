@@ -389,7 +389,8 @@ fun MainAppContent(
             composable(Screen.Notifications.route) {
                 NotificationsScreen(
                     viewModel = notificationViewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onInviteAccepted = { authViewModel.refreshProfile() }
                 )
             }
             composable(Screen.Settings.route) {

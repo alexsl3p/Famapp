@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AddTask
 import androidx.compose.material.icons.outlined.AssignmentInd
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.ShoppingCart
@@ -36,7 +37,8 @@ import com.kinly.famapp.ui.theme.*
 @Composable
 fun NotificationsScreen(
     viewModel: NotificationViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onInviteAccepted: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -88,7 +90,15 @@ fun NotificationsScreen(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.notifications, key = { it.id }) { n ->
-                    NotificationRow(n)
+                    NotificationRow(
+                        n = n,
+                        onAccept = if (n.type == "family_invite" && n.entityId != null) {
+                            { viewModel.acceptInvite(n.entityId, onInviteAccepted) }
+                        } else null,
+                        onDecline = if (n.type == "family_invite" && n.entityId != null) {
+                            { viewModel.declineInvite(n.entityId) }
+                        } else null
+                    )
                 }
             }
         }
@@ -96,35 +106,56 @@ fun NotificationsScreen(
 }
 
 @Composable
-private fun NotificationRow(n: Notification) {
+private fun NotificationRow(
+    n: Notification,
+    onAccept: (() -> Unit)? = null,
+    onDecline: (() -> Unit)? = null
+) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(iconColors(n.type))),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    iconFor(n.type),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(n.title, color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                if (!n.body.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(n.body, color = OnSurfaceVariant, fontSize = 13.sp)
+        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(iconColors(n.type))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(iconFor(n.type), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
-                Spacer(Modifier.height(4.dp))
-                Text(formatNotifTime(n.createdAt), color = Outline, fontSize = 11.sp)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(n.title, color = OnSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    if (!n.body.isNullOrBlank()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(n.body, color = OnSurfaceVariant, fontSize = 13.sp)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(formatNotifTime(n.createdAt), color = Outline, fontSize = 11.sp)
+                }
+            }
+            if (onAccept != null && onDecline != null) {
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Brush.linearGradient(AccentGradient))
+                            .clickable { onAccept() }
+                            .padding(vertical = 9.dp),
+                        contentAlignment = Alignment.Center
+                    ) { Text("Принять", color = Color(0xFF0B1326), fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(12.dp))
+                            .clickable { onDecline() }
+                            .padding(vertical = 9.dp),
+                        contentAlignment = Alignment.Center
+                    ) { Text("Отклонить", color = OnSurfaceVariant, fontWeight = FontWeight.Medium, fontSize = 13.sp) }
+                }
             }
         }
     }
@@ -134,6 +165,7 @@ private fun iconFor(type: String): ImageVector = when (type) {
     "shopping_added" -> Icons.Outlined.ShoppingCart
     "task_assigned" -> Icons.Outlined.AssignmentInd
     "task_completed" -> Icons.Outlined.CheckCircle
+    "family_invite" -> Icons.Outlined.Group
     else -> Icons.Outlined.AddTask
 }
 

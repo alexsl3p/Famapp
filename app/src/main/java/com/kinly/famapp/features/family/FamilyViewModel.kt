@@ -15,7 +15,9 @@ data class FamilyUiState(
     val family: Family? = null,
     val members: List<FamilyMember> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val inviteMessage: String? = null,
+    val isInviting: Boolean = false
 )
 
 @HiltViewModel
@@ -59,6 +61,27 @@ class FamilyViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
         }
+    }
+
+    /** Пригласить пользователя по email — ему придёт уведомление с подтверждением. */
+    fun inviteByEmail(email: String) {
+        val familyId = _uiState.value.family?.id ?: return
+        if (email.isBlank()) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isInviting = true, inviteMessage = null)
+            val result = familyRepository.inviteByEmail(familyId, email.trim())
+            val msg = when (result) {
+                "ok" -> "Приглашение отправлено — ждём подтверждения"
+                "user_not_found" -> "Нет пользователя с таким email (нужно, чтобы он зарегистрировался)"
+                "already_member" -> "Этот человек уже в семье"
+                else -> "Не удалось отправить приглашение"
+            }
+            _uiState.value = _uiState.value.copy(isInviting = false, inviteMessage = msg)
+        }
+    }
+
+    fun clearInviteMessage() {
+        _uiState.value = _uiState.value.copy(inviteMessage = null)
     }
 
     fun regenerateCode() {
