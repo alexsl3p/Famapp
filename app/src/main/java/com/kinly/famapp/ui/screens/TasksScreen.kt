@@ -57,6 +57,7 @@ import com.kinly.famapp.features.tasks.TaskDraftViewModel
 import com.kinly.famapp.features.tasks.TaskFilter
 import com.kinly.famapp.features.tasks.TasksViewModel
 import com.kinly.famapp.ui.components.GlassCard
+import com.kinly.famapp.ui.components.ScrollListWithStickyFooter
 import com.kinly.famapp.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -100,13 +101,28 @@ fun TasksScreen(
         containerColor = Color.Transparent
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 20.dp, bottom = 12.dp)
+            ScrollListWithStickyFooter(
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 12.dp),
+                footer = {
+                    // Кнопка добавления: под списком, пока он влезает; дальше — прижата над навигацией.
+                    if (uiState.filter != TaskFilter.COMPLETED) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 4.dp)) {
+                            Spacer(Modifier.weight(1.3f))
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Brush.linearGradient(listOf(Primary, Secondary)))
+                                    .clickable { draftViewModel.open() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = "Добавить задачу", tint = Color(0xFF0B1326), modifier = Modifier.size(24.dp))
+                            }
+                            Spacer(Modifier.weight(1.3f))
+                        }
+                    }
+                }
             ) {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                 Text(text = "Задачи семьи", style = MaterialTheme.typography.headlineSmall, color = Color.White)
@@ -184,25 +200,6 @@ fun TasksScreen(
                 }
 
             }
-            }
-
-            // Кнопка добавления — компактный «+» по центру, закреплён над навигацией
-            if (uiState.filter != TaskFilter.COMPLETED) {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 4.dp)) {
-                    Spacer(Modifier.weight(1.3f))
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Brush.linearGradient(listOf(Primary, Secondary)))
-                            .clickable { draftViewModel.open() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Add, contentDescription = "Добавить задачу", tint = Color(0xFF0B1326), modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(Modifier.weight(1.3f))
-                }
             }
         }
     }

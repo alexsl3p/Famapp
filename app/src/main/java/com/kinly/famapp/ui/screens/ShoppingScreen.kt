@@ -57,6 +57,7 @@ import com.kinly.famapp.features.products.BarcodeLookup
 import com.kinly.famapp.features.products.ProductViewModel
 import com.kinly.famapp.features.shopping.ShoppingViewModel
 import com.kinly.famapp.ui.components.GlassCard
+import com.kinly.famapp.ui.components.ScrollListWithStickyFooter
 import com.kinly.famapp.ui.components.emojiForItem
 import com.kinly.famapp.ui.theme.*
 
@@ -92,13 +93,19 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
             // Тап в любом пустом месте снимает фокус → черновик товара сохраняется.
             .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
     ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(top = 20.dp, bottom = 12.dp)
+        ScrollListWithStickyFooter(
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 12.dp),
+            footer = {
+                // Строка добавления товара: под списком, пока он влезает; дальше — прижата над навигацией.
+                if (currentList != null) {
+                    InlineAddRow(
+                        products = productState.products,
+                        onAdd = { title, qty, productId ->
+                            viewModel.addItem(currentList.id, title, qty, productId = productId)
+                        }
+                    )
+                }
+            }
         ) {
         // Выбор списка вынесен в заголовок карточки ниже (тап по названию + стрелка).
 
@@ -216,16 +223,6 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                 }
             }
         }
-        }
-
-        // Строка добавления товара — всегда закреплена над нижней навигацией
-        if (currentList != null) {
-            InlineAddRow(
-                products = productState.products,
-                onAdd = { title, qty, productId ->
-                    viewModel.addItem(currentList.id, title, qty, productId = productId)
-                }
-            )
         }
     }
 
