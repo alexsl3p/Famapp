@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -340,6 +341,7 @@ fun MainAppContent(
         bottomBar = {
             BottomNavBar(
                 currentRoute = currentRoute,
+                familyUnread = familyUiState.totalUnread,
                 onItemSelected = { route ->
                     // Запоминаем выбранную вкладку для восстановления после перезапуска.
                     tabStateViewModel.saveTab(route)
@@ -417,21 +419,29 @@ fun MainAppContent(
                     currentUserId = profile.id,
                     onMessage = { member ->
                         navController.navigate(Screen.Chat.create(member.userId, member.displayName))
+                    },
+                    onOpenGroupChat = {
+                        navController.navigate(Screen.Chat.create("group", "Семейный чат"))
                     }
                 )
             }
             composable(Screen.Chat.route) { backStackEntry ->
                 val chatViewModel: com.kinly.famapp.features.chat.ChatViewModel = hiltViewModel()
-                val otherId = backStackEntry.arguments?.getString("otherId") ?: ""
+                val rawId = backStackEntry.arguments?.getString("otherId") ?: ""
                 val otherName = backStackEntry.arguments?.getString("otherName")
                     ?.let { android.net.Uri.decode(it) } ?: ""
+                // "group" → семейный чат (otherId = null)
+                val otherId = if (rawId == "group") null else rawId
                 ChatScreen(
                     viewModel = chatViewModel,
                     familyId = familyId,
                     meId = profile.id,
                     otherId = otherId,
                     otherName = otherName,
-                    onBack = { navController.popBackStack() }
+                    onBack = {
+                        familyViewModel.loadUnread()
+                        navController.popBackStack()
+                    }
                 )
             }
             composable(Screen.Profile.route) {
@@ -476,6 +486,7 @@ fun MainAppContent(
 @Composable
 fun BottomNavBar(
     currentRoute: String?,
+    familyUnread: Int = 0,
     onItemSelected: (String) -> Unit,
     onVoiceClick: () -> Unit
 ) {
@@ -495,7 +506,7 @@ fun BottomNavBar(
         ) {
             // Первые две вкладки
             bottomNavItems.take(2).forEach { item ->
-                NavCell(item, currentRoute == item.route) { onItemSelected(item.route) }
+                NavCell(item, currentRoute == item.route, badgeCount = 0) { onItemSelected(item.route) }
             }
 
             // Центральная круглая кнопка-микрофон
@@ -520,7 +531,8 @@ fun BottomNavBar(
 
             // Последние две вкладки
             bottomNavItems.drop(2).forEach { item ->
-                NavCell(item, currentRoute == item.route) { onItemSelected(item.route) }
+                val badge = if (item.route == Screen.Family.route) familyUnread else 0
+                NavCell(item, currentRoute == item.route, badgeCount = badge) { onItemSelected(item.route) }
             }
         }
     }
@@ -530,6 +542,7 @@ fun BottomNavBar(
 private fun RowScope.NavCell(
     item: com.kinly.famapp.navigation.BottomNavItem,
     selected: Boolean,
+    badgeCount: Int = 0,
     onClick: () -> Unit
 ) {
     Column(
@@ -544,18 +557,41 @@ private fun RowScope.NavCell(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier
-                .size(width = 46.dp, height = 30.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(if (selected) Primary else Color.Transparent),
+            modifier = Modifier.size(width = 46.dp, height = 30.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                contentDescription = item.label,
-                tint = if (selected) Color(0xFF0B1326) else Color(0xFF9090A0),
-                modifier = Modifier.size(22.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(width = 46.dp, height = 30.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (selected) Primary else Color.Transparent),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                    contentDescription = item.label,
+                    tint = if (selected) Color(0xFF0B1326) else Color(0xFF9090A0),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            if (badgeCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFAFD3))
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                        color = Color(0xFF0B1326),
+                        fontSize = 10.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(3.dp))
         Text(

@@ -8,7 +8,7 @@ data class Message(
     val id: String,
     @SerialName("family_id") val familyId: String,
     @SerialName("sender_id") val senderId: String,
-    @SerialName("recipient_id") val recipientId: String,
+    @SerialName("recipient_id") val recipientId: String? = null,
     val body: String? = null,
     @SerialName("image_url") val imageUrl: String? = null,
     @SerialName("audio_url") val audioUrl: String? = null,

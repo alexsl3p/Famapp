@@ -44,10 +44,11 @@ fun ChatScreen(
     viewModel: ChatViewModel,
     familyId: String,
     meId: String,
-    otherId: String,
+    otherId: String?,
     otherName: String,
     onBack: () -> Unit
 ) {
+    val isGroup = otherId == null
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val listState = rememberLazyListState()
@@ -91,7 +92,13 @@ fun ChatScreen(
             contentPadding = PaddingValues(vertical = 10.dp)
         ) {
             items(state.messages, key = { it.id }) { m ->
-                MessageBubble(m, mine = viewModel.isMine(m), onImageClick = { fullscreen = it })
+                val mine = viewModel.isMine(m)
+                MessageBubble(
+                    m = m,
+                    mine = mine,
+                    senderLabel = if (isGroup && !mine) viewModel.senderName(m) else null,
+                    onImageClick = { fullscreen = it }
+                )
             }
         }
 
@@ -166,7 +173,7 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(m: Message, mine: Boolean, onImageClick: (String) -> Unit) {
+private fun MessageBubble(m: Message, mine: Boolean, senderLabel: String? = null, onImageClick: (String) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
         Column(
             modifier = Modifier
@@ -179,6 +186,15 @@ private fun MessageBubble(m: Message, mine: Boolean, onImageClick: (String) -> U
                 .padding(if (m.imageUrl != null) 4.dp else 10.dp)
         ) {
             val textColor = if (mine) Color(0xFF0B1326) else OnSurface
+            if (senderLabel != null) {
+                Text(
+                    senderLabel,
+                    color = Primary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = if (m.imageUrl != null) 6.dp else 0.dp, vertical = if (m.imageUrl != null) 2.dp else 0.dp)
+                )
+            }
             if (m.imageUrl != null) {
                 AsyncImage(
                     model = m.imageUrl,

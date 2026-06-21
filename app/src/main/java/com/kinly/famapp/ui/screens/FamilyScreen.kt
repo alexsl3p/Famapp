@@ -34,7 +34,8 @@ import com.kinly.famapp.ui.theme.*
 fun FamilyScreen(
     viewModel: FamilyViewModel,
     currentUserId: String,
-    onMessage: (FamilyMember) -> Unit = {}
+    onMessage: (FamilyMember) -> Unit = {},
+    onOpenGroupChat: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val clipboard = LocalClipboardManager.current
@@ -62,6 +63,10 @@ fun FamilyScreen(
             modifier = Modifier.padding(bottom = 20.dp)
         )
 
+        // 0) Семейный (групповой) чат
+        GroupChatCard(unread = uiState.groupUnread, onClick = onOpenGroupChat)
+        Spacer(Modifier.height(16.dp))
+
         // 1) Участники семьи
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -78,6 +83,7 @@ fun FamilyScreen(
                 RealFamilyMemberCard(
                     member = member,
                     isCurrentUser = member.userId == currentUserId,
+                    unread = uiState.memberUnread(member.userId),
                     onMessage = { onMessage(member) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -163,7 +169,7 @@ fun FamilyScreen(
 }
 
 @Composable
-fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean, onMessage: () -> Unit = {}) {
+fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean, unread: Int = 0, onMessage: () -> Unit = {}) {
     val memberColor = when (member.effectiveColor) {
         "purple" -> Primary
         "pink" -> Secondary
@@ -207,12 +213,17 @@ fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean, onMessage
                 }
             }
 
-            Text(
-                text = member.displayName + if (isCurrentUser) " (Вы)" else "",
-                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
-                color = OnSurface,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+                Text(
+                    text = member.displayName + if (isCurrentUser) " (Вы)" else "",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
+                    color = OnSurface
+                )
+                if (unread > 0) {
+                    Spacer(Modifier.width(8.dp))
+                    UnreadBadge(unread)
+                }
+            }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(imageVector = Icons.Outlined.Home, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
@@ -239,11 +250,57 @@ fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean, onMessage
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(imageVector = Icons.Outlined.Chat, contentDescription = null, tint = Primary, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "Сообщение", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            Text(
+                                text = if (unread > 0) "Новое сообщение" else "Сообщение",
+                                color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/** Карточка-вход в семейный (групповой) чат. */
+@Composable
+fun GroupChatCard(unread: Int, onClick: () -> Unit) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier.size(48.dp).background(Brush.linearGradient(AccentGradient), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Outlined.Chat, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Семейный чат", color = OnSurface, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text("Общий чат всех членов семьи", color = OnSurfaceVariant, fontSize = 13.sp)
+            }
+            if (unread > 0) UnreadBadge(unread)
+        }
+    }
+}
+
+/** Розовый бейдж с количеством непрочитанных. */
+@Composable
+fun UnreadBadge(count: Int) {
+    Box(
+        modifier = Modifier
+            .defaultMinSize(minWidth = 22.dp, minHeight = 22.dp)
+            .background(Secondary, CircleShape)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (count > 99) "99+" else count.toString(),
+            color = Color(0xFF0B1326),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

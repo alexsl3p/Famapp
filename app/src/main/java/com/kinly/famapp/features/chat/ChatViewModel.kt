@@ -3,6 +3,7 @@ package com.kinly.famapp.features.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kinly.famapp.data.models.Message
+import com.kinly.famapp.features.family.FamilyRepository
 import com.kinly.famapp.features.storage.StorageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.SupabaseClient
@@ -20,6 +21,7 @@ import javax.inject.Inject
 
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
+    val members: Map<String, String> = emptyMap(), // userId -> имя (для группового чата)
     val isLoading: Boolean = false,
     val isSending: Boolean = false
 )
@@ -28,6 +30,7 @@ data class ChatUiState(
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val storageRepository: StorageRepository,
+    private val familyRepository: FamilyRepository,
     private val supabase: SupabaseClient
 ) : ViewModel() {
 
@@ -36,28 +39,44 @@ class ChatViewModel @Inject constructor(
 
     private var familyId: String = ""
     private var meId: String = ""
-    private var otherId: String = ""
+    private var otherId: String? = null // null → семейный (групповой) чат
     private var started = false
 
-    fun start(familyId: String, meId: String, otherId: String) {
+    private val isGroup: Boolean get() = otherId == null
+    private val chatKey: String get() = otherId ?: GROUP_CHAT_KEY
+
+    /** otherId = null → открыть семейный (групповой) чат. */
+    fun start(familyId: String, meId: String, otherId: String?) {
         if (started && this.otherId == otherId) return
         started = true
         this.familyId = familyId
         this.meId = meId
         this.otherId = otherId
+        if (isGroup) loadMembers()
         refresh()
         subscribe()
     }
 
+    private fun loadMembers() {
+        viewModelScope.launch {
+            val map = familyRepository.getMembers(familyId).associate { it.userId to it.displayName }
+            _uiState.value = _uiState.value.copy(members = map)
+        }
+    }
+
     private fun refresh() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(messages = chatRepository.getDialog(meId, otherId))
+            val msgs = if (isGroup) chatRepository.getGroup(familyId)
+                       else chatRepository.getDialog(meId, otherId!!)
+            _uiState.value = _uiState.value.copy(messages = msgs)
+            // Чат открыт — считаем прочитанным.
+            chatRepository.markRead(familyId, chatKey)
         }
     }
 
     private fun subscribe() {
         viewModelScope.launch {
-            val channel = supabase.realtime.channel("chat-$meId-$otherId")
+            val channel = supabase.realtime.channel("chat-$meId-$chatKey")
             channel.postgresChangeFlow<PostgresAction>(schema = "public") {
                 table = "messages"
             }.onEach { refresh() }.launchIn(this)
@@ -99,4 +118,5 @@ class ChatViewModel @Inject constructor(
     }
 
     fun isMine(m: Message): Boolean = m.senderId == meId
+    fun senderName(m: Message): String = _uiState.value.members[m.senderId] ?: "Участник"
 }

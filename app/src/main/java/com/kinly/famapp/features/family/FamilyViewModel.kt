@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kinly.famapp.data.models.Family
 import com.kinly.famapp.data.models.FamilyMember
+import com.kinly.famapp.features.chat.ChatRepository
+import com.kinly.famapp.features.chat.GROUP_CHAT_KEY
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.realtime.PostgresAction
@@ -24,12 +26,18 @@ data class FamilyUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val inviteMessage: String? = null,
-    val isInviting: Boolean = false
-)
+    val isInviting: Boolean = false,
+    val unreadByChat: Map<String, Int> = emptyMap() // ключ = id отправителя или "group"
+) {
+    val totalUnread: Int get() = unreadByChat.values.sum()
+    val groupUnread: Int get() = unreadByChat[GROUP_CHAT_KEY] ?: 0
+    fun memberUnread(userId: String): Int = unreadByChat[userId] ?: 0
+}
 
 @HiltViewModel
 class FamilyViewModel @Inject constructor(
     private val familyRepository: FamilyRepository,
+    private val chatRepository: ChatRepository,
     private val supabase: SupabaseClient
 ) : ViewModel() {
 
@@ -47,6 +55,7 @@ class FamilyViewModel @Inject constructor(
             val members = familyRepository.getMembers(familyId)
             _uiState.value = _uiState.value.copy(family = family, members = members, isLoading = false)
             subscribeRealtime(familyId)
+            loadUnread()
         }
     }
 
@@ -56,6 +65,16 @@ class FamilyViewModel @Inject constructor(
         viewModelScope.launch {
             val members = familyRepository.getMembers(familyId)
             _uiState.value = _uiState.value.copy(members = members)
+            loadUnread()
+        }
+    }
+
+    /** Обновить счётчики непрочитанных сообщений. */
+    fun loadUnread() {
+        val familyId = currentFamilyId ?: return
+        viewModelScope.launch {
+            val counts = chatRepository.unreadCounts(familyId)
+            _uiState.value = _uiState.value.copy(unreadByChat = counts)
         }
     }
 
@@ -67,6 +86,9 @@ class FamilyViewModel @Inject constructor(
             channel.postgresChangeFlow<PostgresAction>(schema = "public") {
                 table = "family_members"
             }.onEach { reload() }.launchIn(this)
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "messages"
+            }.onEach { loadUnread() }.launchIn(this)
             channel.subscribe()
         }
     }
