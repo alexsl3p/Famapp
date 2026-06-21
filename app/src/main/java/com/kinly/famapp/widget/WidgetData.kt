@@ -70,6 +70,16 @@ object WidgetData {
         prefs(context).edit().putString(K_TASKS, encode(items)).apply()
     }
 
+    /** Мгновенно убирает отмеченный пункт из снимка (оптимистично, до сетевого ответа). */
+    fun removeItem(context: Context, kind: String, id: String) {
+        val snap = read(context)
+        if (kind == "task") {
+            writeTasks(context, snap.tasks.filterNot { it.id == id })
+        } else {
+            writeShopping(context, snap.shopping.filterNot { it.id == id })
+        }
+    }
+
     fun toggleMode(context: Context) {
         val p = prefs(context)
         val next = if ((p.getString(K_MODE, "shopping") ?: "shopping") == "shopping") "tasks" else "shopping"

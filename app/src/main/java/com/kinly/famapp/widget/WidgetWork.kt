@@ -65,6 +65,12 @@ class ToggleItemAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val id = parameters[ItemIdKey] ?: return
         val kind = parameters[ItemKindKey] ?: return
+
+        // 1) Сразу убираем пункт из виджета — не дожидаясь сети, чтобы галочка не «отскакивала».
+        WidgetData.removeItem(context, kind, id)
+        FamilyWidget().updateAll(context)
+
+        // 2) Фиксируем изменение в базе и подтягиваем актуальный список.
         val supabase = EntryPointAccessors
             .fromApplication(context, WidgetEntryPoint::class.java)
             .supabase()
@@ -88,9 +94,9 @@ class ToggleItemAction : ActionCallback {
                 }.decodeList<Task>()
                 WidgetData.writeShopping(context, shopping.map { WidgetItem(it.id, it.title) })
                 WidgetData.writeTasks(context, tasks.map { WidgetItem(it.id, it.title) })
+                FamilyWidget().updateAll(context)
             }
         }
-        FamilyWidget().updateAll(context)
     }
 }
 
