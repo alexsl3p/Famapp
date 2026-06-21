@@ -100,19 +100,6 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                 .padding(horizontal = 16.dp)
                 .padding(top = 20.dp, bottom = 12.dp)
         ) {
-        Text(
-            text = "Списки покупок",
-            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 23.sp),
-            fontWeight = FontWeight.Bold,
-            color = OnSurface
-        )
-        Text(
-            text = "Нажмите на товар, чтобы отметить купленным",
-            style = MaterialTheme.typography.bodySmall,
-            color = OnSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
-        )
-
         // Выбор списка вынесен в заголовок карточки ниже (тап по названию + стрелка).
 
         if (uiState.isLoading) {
