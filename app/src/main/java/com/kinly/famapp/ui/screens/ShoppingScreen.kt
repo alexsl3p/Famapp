@@ -86,6 +86,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
     val sorted = remember(items) { items.sortedBy { it.isChecked } }
     val activeCount = items.count { !it.isChecked }
     val focusManager = LocalFocusManager.current
+    val addSignal by viewModel.addSignal.collectAsState()
 
     Column(
         modifier = Modifier
@@ -100,6 +101,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                 if (currentList != null) {
                     InlineAddRow(
                         products = productState.products,
+                        startSignal = addSignal,
                         onAdd = { title, qty, productId ->
                             viewModel.addItem(currentList.id, title, qty, productId = productId)
                         }
@@ -267,6 +269,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
 @Composable
 private fun InlineAddRow(
     products: List<Product>,
+    startSignal: Int = 0,
     onAdd: (String, String?, String?) -> Unit
 ) {
     var adding by remember { mutableStateOf(false) }
@@ -275,6 +278,11 @@ private fun InlineAddRow(
     var hasFocused by remember { mutableStateOf(false) }
     var suppressSave by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+
+    // Внешний сигнал (кнопка + из виджета) открывает строку добавления.
+    LaunchedEffect(startSignal) {
+        if (startSignal > 0) { hasFocused = false; adding = true }
+    }
 
     // Подсказки из каталога: совпадения по названию (сначала те, что начинаются с введённого).
     val suggestions = remember(name, products) {

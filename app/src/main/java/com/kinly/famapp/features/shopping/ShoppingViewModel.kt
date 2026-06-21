@@ -49,6 +49,11 @@ class ShoppingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ShoppingUiState())
     val uiState: StateFlow<ShoppingUiState> = _uiState.asStateFlow()
 
+    // Сигнал «открыть строку добавления» (например, по кнопке + из виджета).
+    private val _addSignal = MutableStateFlow(0)
+    val addSignal: StateFlow<Int> = _addSignal.asStateFlow()
+    fun requestAdd() { _addSignal.value++ }
+
     private var currentFamilyId: String? = null
     private var subscribed = false
 

@@ -75,4 +75,8 @@ object WidgetData {
         val next = if ((p.getString(K_MODE, "shopping") ?: "shopping") == "shopping") "tasks" else "shopping"
         p.edit().putString(K_MODE, next).apply()
     }
+
+    fun setMode(context: Context, mode: String) {
+        prefs(context).edit().putString(K_MODE, mode).apply()
+    }
 }

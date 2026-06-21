@@ -66,11 +66,13 @@ class MainActivity : ComponentActivity() {
     // Раздел, который надо открыть по тапу на виджет ("shopping"/"tasks").
     private val pendingOpenTab = mutableStateOf<String?>(null)
     private val pendingVoice = mutableStateOf(false)
+    private val pendingAdd = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingOpenTab.value = intent?.getStringExtra("open_tab")
         pendingVoice.value = intent?.getBooleanExtra("start_voice", false) == true
+        pendingAdd.value = intent?.getBooleanExtra("start_add", false) == true
         enableEdgeToEdge()
         setContent {
             val appearanceViewModel: AppearanceViewModel = hiltViewModel()
@@ -80,7 +82,9 @@ class MainActivity : ComponentActivity() {
                     requestedTab = pendingOpenTab.value,
                     onTabConsumed = { pendingOpenTab.value = null },
                     requestVoice = pendingVoice.value,
-                    onVoiceConsumed = { pendingVoice.value = false }
+                    onVoiceConsumed = { pendingVoice.value = false },
+                    requestAdd = pendingAdd.value,
+                    onAddConsumed = { pendingAdd.value = false }
                 )
             }
         }
@@ -91,6 +95,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         pendingOpenTab.value = intent.getStringExtra("open_tab")
         pendingVoice.value = intent.getBooleanExtra("start_voice", false)
+        pendingAdd.value = intent.getBooleanExtra("start_add", false)
     }
 }
 
@@ -99,7 +104,9 @@ fun KinlyApp(
     requestedTab: String? = null,
     onTabConsumed: () -> Unit = {},
     requestVoice: Boolean = false,
-    onVoiceConsumed: () -> Unit = {}
+    onVoiceConsumed: () -> Unit = {},
+    requestAdd: Boolean = false,
+    onAddConsumed: () -> Unit = {}
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
@@ -193,7 +200,9 @@ fun KinlyApp(
                     requestedTab = requestedTab,
                     onTabConsumed = onTabConsumed,
                     requestVoice = requestVoice,
-                    onVoiceConsumed = onVoiceConsumed
+                    onVoiceConsumed = onVoiceConsumed,
+                    requestAdd = requestAdd,
+                    onAddConsumed = onAddConsumed
                 )
             }
         }
@@ -207,7 +216,9 @@ fun MainAppContent(
     requestedTab: String? = null,
     onTabConsumed: () -> Unit = {},
     requestVoice: Boolean = false,
-    onVoiceConsumed: () -> Unit = {}
+    onVoiceConsumed: () -> Unit = {},
+    requestAdd: Boolean = false,
+    onAddConsumed: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -226,6 +237,7 @@ fun MainAppContent(
     }
 
     val tasksViewModel: TasksViewModel = hiltViewModel()
+    val draftViewModel: com.kinly.famapp.features.tasks.TaskDraftViewModel = hiltViewModel()
     val shoppingViewModel: ShoppingViewModel = hiltViewModel()
     val familyViewModel: FamilyViewModel = hiltViewModel()
     val productViewModel: ProductViewModel = hiltViewModel()
@@ -238,8 +250,8 @@ fun MainAppContent(
     val notificationState by notificationViewModel.uiState.collectAsState()
     val shoppingUiState by shoppingViewModel.uiState.collectAsState()
 
-    // Открытие нужного раздела по тапу на виджет.
-    LaunchedEffect(requestedTab) {
+    // Открытие нужного раздела по тапу на виджет (+ опционально сразу форма добавления).
+    LaunchedEffect(requestedTab, requestAdd) {
         val route = when (requestedTab) {
             "shopping" -> Screen.Shopping.route
             "tasks" -> Screen.Tasks.route
@@ -251,6 +263,10 @@ fun MainAppContent(
                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                 launchSingleTop = true
                 restoreState = true
+            }
+            if (requestAdd) {
+                if (requestedTab == "tasks") draftViewModel.open() else shoppingViewModel.requestAdd()
+                onAddConsumed()
             }
             onTabConsumed()
         }
@@ -381,6 +397,7 @@ fun MainAppContent(
             composable(Screen.Tasks.route) {
                 TasksScreen(
                     viewModel = tasksViewModel,
+                    draftViewModel = draftViewModel,
                     familyId = familyId,
                     currentUserId = profile.id,
                     members = familyUiState.members

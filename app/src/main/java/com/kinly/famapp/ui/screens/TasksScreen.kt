@@ -70,11 +70,11 @@ fun TasksScreen(
     viewModel: TasksViewModel,
     familyId: String,
     currentUserId: String,
-    members: List<FamilyMember> = emptyList()
+    members: List<FamilyMember> = emptyList(),
+    draftViewModel: TaskDraftViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filteredTasks = viewModel.getFilteredTasks()
-    val draftViewModel: TaskDraftViewModel = hiltViewModel()
     val draft by draftViewModel.draft.collectAsState()
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var deletingTask by remember { mutableStateOf<Task?>(null) }
