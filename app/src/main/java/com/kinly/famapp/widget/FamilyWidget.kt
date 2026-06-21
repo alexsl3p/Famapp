@@ -131,20 +131,24 @@ private fun WidgetContent(data: WidgetSnapshot) {
 
 @Composable
 private fun ModeTab(label: String, selected: Boolean, mode: String) {
-    Text(
-        text = label,
-        style = TextStyle(
-            color = ColorProvider(if (selected) DarkInk else White),
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        ),
+    Box(
         modifier = GlanceModifier
             .background(if (selected) Pink else Color(0x1AFFFFFF))
             .cornerRadius(14.dp)
-            .padding(horizontal = 16.dp, vertical = 9.dp)
             .clickable(actionRunCallback<SetModeAction>(actionParametersOf(ModeKey to mode)))
-    )
+            .padding(horizontal = 18.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = TextStyle(
+                color = ColorProvider(if (selected) DarkInk else White),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        )
+    }
 }
 
 @Composable
