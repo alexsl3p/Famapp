@@ -113,19 +113,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
             modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
         )
 
-        // Выбор списка через дропдаун — на экране показывается один список
-        if (uiState.lists.isNotEmpty()) {
-            ShoppingListSelector(
-                lists = uiState.lists,
-                currentList = currentList,
-                expanded = showListMenu,
-                onExpandedChange = { showListMenu = it },
-                onSelect = { viewModel.selectList(it); showListMenu = false },
-                onCreateNew = { showListMenu = false; showCreateList = true },
-                onDelete = { deletingList = it }
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-        }
+        // Выбор списка вынесен в заголовок карточки ниже (тап по названию + стрелка).
 
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -140,32 +128,66 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
         } else {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
-                    // Заголовок списка
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
+                    // Заголовок списка — он же переключатель списков (тап → дропдаун)
+                    Box {
+                        Row(
                             modifier = Modifier
-                                .size(34.dp)
-                                .background(Brush.linearGradient(AccentGradient), CircleShape),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable { showListMenu = true }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Outlined.LocalDining, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(17.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .background(Brush.linearGradient(AccentGradient), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.LocalDining, contentDescription = null, tint = Color(0xFF0B1326), modifier = Modifier.size(17.dp))
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        currentList.title,
+                                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = OnSurface
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(
+                                        if (showListMenu) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                        contentDescription = "Сменить список",
+                                        tint = Primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Text(
+                                    text = if (activeCount == 0) "всё куплено" else "$activeCount ${pluralItems(activeCount)} осталось",
+                                    color = OnSurfaceVariant,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(top = 1.dp)
+                                )
+                            }
                         }
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                currentList.title,
-                                style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                                fontWeight = FontWeight.SemiBold,
-                                color = OnSurface
-                            )
-                            Text(
-                                text = if (activeCount == 0) "всё куплено" else "$activeCount ${pluralItems(activeCount)} осталось",
-                                color = OnSurfaceVariant,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(top = 1.dp)
+                        DropdownMenu(expanded = showListMenu, onDismissRequest = { showListMenu = false }) {
+                            uiState.lists.forEach { list ->
+                                DropdownMenuItem(
+                                    text = { Text(list.title, color = if (list.id == currentList.id) Primary else OnSurface) },
+                                    onClick = { viewModel.selectList(list.id); showListMenu = false },
+                                    trailingIcon = {
+                                        IconButton(onClick = { showListMenu = false; deletingList = list }, modifier = Modifier.size(28.dp)) {
+                                            Icon(Icons.Outlined.DeleteOutline, contentDescription = "Удалить список", tint = Outline, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                )
+                            }
+                            HorizontalDivider(color = Color(0x1AFFFFFF))
+                            DropdownMenuItem(
+                                text = { Text("Создать список", color = Primary) },
+                                leadingIcon = { Icon(Icons.Outlined.PlaylistAdd, null, tint = Primary) },
+                                onClick = { showListMenu = false; showCreateList = true }
                             )
                         }
                     }
@@ -694,56 +716,6 @@ fun AddShoppingItemDialog(
             }
         }
     )
-}
-
-@Composable
-fun ShoppingListSelector(
-    lists: List<ShoppingList>,
-    currentList: ShoppingList?,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    onSelect: (String) -> Unit,
-    onCreateNew: () -> Unit,
-    onDelete: (ShoppingList) -> Unit = {}
-) {
-    Box {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0x1AFFFFFF))
-                .clickable { onExpandedChange(true) }
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = currentList?.title ?: "Списки",
-                color = OnSurface,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp
-            )
-            Spacer(Modifier.width(6.dp))
-            Icon(Icons.Outlined.ExpandMore, contentDescription = "Выбрать список", tint = Primary, modifier = Modifier.size(20.dp))
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
-            lists.forEach { list ->
-                DropdownMenuItem(
-                    text = { Text(list.title, color = if (list.id == currentList?.id) Primary else OnSurface) },
-                    onClick = { onSelect(list.id) },
-                    trailingIcon = {
-                        IconButton(onClick = { onExpandedChange(false); onDelete(list) }, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Outlined.DeleteOutline, contentDescription = "Удалить список", tint = Outline, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                )
-            }
-            HorizontalDivider(color = Color(0x1AFFFFFF))
-            DropdownMenuItem(
-                text = { Text("Создать список", color = Primary) },
-                leadingIcon = { Icon(Icons.Outlined.PlaylistAdd, null, tint = Primary) },
-                onClick = onCreateNew
-            )
-        }
-    }
 }
 
 @Composable
