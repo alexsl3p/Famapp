@@ -296,6 +296,7 @@ private fun InlineAddRow(
             .toList()
     }
 
+    val haptic = com.kinly.famapp.ui.components.rememberHaptic()
     if (!adding) {
         // Компактный «+» по центру
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 4.dp)) {
@@ -306,7 +307,10 @@ private fun InlineAddRow(
                     .height(44.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(Brush.linearGradient(AccentGradient))
-                    .clickable { hasFocused = false; adding = true },
+                    .clickable {
+                        haptic(com.kinly.famapp.ui.components.Haptic.Tick)
+                        hasFocused = false; adding = true
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Добавить товар", tint = Color(0xFF0B1326), modifier = Modifier.size(24.dp))
@@ -472,6 +476,11 @@ fun ShoppingItemRow(
     onDelete: () -> Unit = {}
 ) {
     val qty = item.quantity?.toIntOrNull() ?: 1
+    val haptic = com.kinly.famapp.ui.components.rememberHaptic()
+    val toggleWithHaptic = {
+        haptic(com.kinly.famapp.ui.components.Haptic.Confirm)
+        onToggle()
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -484,7 +493,7 @@ fun ShoppingItemRow(
                 .clip(RoundedCornerShape(7.dp))
                 .background(if (item.isChecked) ShoppingPrimary.copy(alpha = 0.25f) else Color(0x14FFFFFF))
                 .border(1.dp, if (item.isChecked) ShoppingPrimary else Color(0x40FFFFFF), RoundedCornerShape(7.dp))
-                .clickable(onClick = onToggle),
+                .clickable(onClick = toggleWithHaptic),
             contentAlignment = Alignment.Center
         ) {
             if (item.isChecked) {
@@ -501,7 +510,7 @@ fun ShoppingItemRow(
         }
 
         Column(
-            modifier = Modifier.weight(1f).clickable(onClick = onToggle)
+            modifier = Modifier.weight(1f).clickable(onClick = toggleWithHaptic)
         ) {
             Text(
                 text = item.title,

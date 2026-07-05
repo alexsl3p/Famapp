@@ -104,6 +104,7 @@ fun TasksScreen(
             ScrollListWithStickyFooter(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 12.dp),
                 footer = {
+                    val haptic = com.kinly.famapp.ui.components.rememberHaptic()
                     // Кнопка добавления: под списком, пока он влезает; дальше — прижата над навигацией.
                     if (uiState.filter != TaskFilter.COMPLETED) {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 4.dp)) {
@@ -114,7 +115,10 @@ fun TasksScreen(
                                     .height(44.dp)
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(Brush.linearGradient(listOf(Primary, Secondary)))
-                                    .clickable { draftViewModel.open() },
+                                    .clickable {
+                                        haptic(com.kinly.famapp.ui.components.Haptic.Tick)
+                                        draftViewModel.open()
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Filled.Add, contentDescription = "Добавить задачу", tint = Color(0xFF0B1326), modifier = Modifier.size(24.dp))
@@ -865,6 +869,7 @@ private fun CompactTaskRow(
         if (hasAttachment) add("📎")
     }.joinToString("  ·  ")
     val assigneeName = task.assignedTo?.let { membersMap[it] }
+    val haptic = com.kinly.famapp.ui.components.rememberHaptic()
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 9.dp),
@@ -877,7 +882,10 @@ private fun CompactTaskRow(
                 .clip(RoundedCornerShape(7.dp))
                 .background(if (task.isCompleted) Primary.copy(alpha = 0.25f) else Color(0x14FFFFFF))
                 .border(1.dp, if (task.isCompleted) Primary else Color(0x40FFFFFF), RoundedCornerShape(7.dp))
-                .clickable { if (task.isCompleted) onUncomplete() else onComplete() },
+                .clickable {
+                    haptic(com.kinly.famapp.ui.components.Haptic.Confirm)
+                    if (task.isCompleted) onUncomplete() else onComplete()
+                },
             contentAlignment = Alignment.Center
         ) {
             if (task.isCompleted) Icon(Icons.Outlined.Check, null, tint = Primary, modifier = Modifier.size(14.dp))

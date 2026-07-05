@@ -8,6 +8,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -377,9 +384,20 @@ fun MainAppContent(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
+        // Переходы: вкладки — мягкий fade+scale, детальные экраны — слайд как в iOS.
+        val detailEnter: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
+            slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(150))
+        }
+        val detailPopExit: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.ExitTransition = {
+            slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(150))
+        }
         NavHost(
             navController = navController,
             startDestination = startRoute,
+            enterTransition = { fadeIn(tween(220)) + scaleIn(initialScale = 0.97f, animationSpec = tween(220)) },
+            exitTransition = { fadeOut(tween(120)) },
+            popEnterTransition = { fadeIn(tween(220)) + scaleIn(initialScale = 0.97f, animationSpec = tween(220)) },
+            popExitTransition = { fadeOut(tween(120)) },
             modifier = Modifier
                 .padding(paddingValues)
                 .consumeWindowInsets(paddingValues)
@@ -437,7 +455,7 @@ fun MainAppContent(
                     }
                 )
             }
-            composable(Screen.Chat.route) { backStackEntry ->
+            composable(Screen.Chat.route, enterTransition = detailEnter, popExitTransition = detailPopExit) { backStackEntry ->
                 val chatViewModel: com.kinly.famapp.features.chat.ChatViewModel = hiltViewModel()
                 val rawId = backStackEntry.arguments?.getString("otherId") ?: ""
                 val otherName = backStackEntry.arguments?.getString("otherName")
@@ -456,21 +474,21 @@ fun MainAppContent(
                     }
                 )
             }
-            composable(Screen.Profile.route) {
+            composable(Screen.Profile.route, enterTransition = detailEnter, popExitTransition = detailPopExit) {
                 ProfileScreen(
                     profile = profile,
                     authViewModel = authViewModel,
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable(Screen.Notifications.route) {
+            composable(Screen.Notifications.route, enterTransition = detailEnter, popExitTransition = detailPopExit) {
                 NotificationsScreen(
                     viewModel = notificationViewModel,
                     onBack = { navController.popBackStack() },
                     onInviteAccepted = { authViewModel.refreshProfile() }
                 )
             }
-            composable(Screen.Settings.route) {
+            composable(Screen.Settings.route, enterTransition = detailEnter, popExitTransition = detailPopExit) {
                 SettingsScreen(
                     unreadCount = notificationState.unreadCount,
                     onBack = { navController.popBackStack() },
@@ -478,14 +496,14 @@ fun MainAppContent(
                     onOpenAppearance = { navController.navigate(Screen.Appearance.route) }
                 )
             }
-            composable(Screen.NotificationSettings.route) {
+            composable(Screen.NotificationSettings.route, enterTransition = detailEnter, popExitTransition = detailPopExit) {
                 NotificationSettingsScreen(
                     viewModel = notificationViewModel,
                     onBack = { navController.popBackStack() },
                     onOpenHistory = { navController.navigate(Screen.Notifications.route) }
                 )
             }
-            composable(Screen.Appearance.route) {
+            composable(Screen.Appearance.route, enterTransition = detailEnter, popExitTransition = detailPopExit) {
                 AppearanceScreen(
                     appearanceViewModel = appearanceViewModel,
                     onBack = { navController.popBackStack() }
@@ -502,6 +520,7 @@ fun BottomNavBar(
     onItemSelected: (String) -> Unit,
     onVoiceClick: () -> Unit
 ) {
+    val haptic = com.kinly.famapp.ui.components.rememberHaptic()
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -518,7 +537,10 @@ fun BottomNavBar(
         ) {
             // Первые две вкладки
             bottomNavItems.take(2).forEach { item ->
-                NavCell(item, currentRoute == item.route, badgeCount = 0) { onItemSelected(item.route) }
+                NavCell(item, currentRoute == item.route, badgeCount = 0) {
+                    haptic(com.kinly.famapp.ui.components.Haptic.Tick)
+                    onItemSelected(item.route)
+                }
             }
 
             // Центральная круглая кнопка-микрофон
@@ -529,7 +551,10 @@ fun BottomNavBar(
                         .clip(CircleShape)
                         .background(Brush.linearGradient(AccentGradient))
                         .border(3.dp, Color(0xCC0B1326), CircleShape)
-                        .clickable { onVoiceClick() },
+                        .clickable {
+                            haptic(com.kinly.famapp.ui.components.Haptic.Confirm)
+                            onVoiceClick()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -544,7 +569,10 @@ fun BottomNavBar(
             // Последние две вкладки
             bottomNavItems.drop(2).forEach { item ->
                 val badge = if (item.route == Screen.Family.route) familyUnread else 0
-                NavCell(item, currentRoute == item.route, badgeCount = badge) { onItemSelected(item.route) }
+                NavCell(item, currentRoute == item.route, badgeCount = badge) {
+                    haptic(com.kinly.famapp.ui.components.Haptic.Tick)
+                    onItemSelected(item.route)
+                }
             }
         }
     }

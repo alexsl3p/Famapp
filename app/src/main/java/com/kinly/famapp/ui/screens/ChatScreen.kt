@@ -75,6 +75,7 @@ fun ChatScreen(
 
     var input by remember { mutableStateOf("") }
     var recording by remember { mutableStateOf(false) }
+    val haptic = com.kinly.famapp.ui.components.rememberHaptic()
     val recorder = remember { AudioRecorder(context) }
     val pickPhoto = rememberPhotoPicker { bytes -> viewModel.sendImage(bytes) }
     var fullscreen by remember { mutableStateOf<String?>(null) }
@@ -175,10 +176,12 @@ fun ChatScreen(
                     modifier = Modifier.size(46.dp).clip(CircleShape).background(micBg)
                         .clickable {
                             if (recording) {
+                                haptic(com.kinly.famapp.ui.components.Haptic.Confirm)
                                 recording = false
                                 val bytes = recorder.stop()
                                 if (bytes != null) viewModel.sendAudio(bytes)
                             } else {
+                                haptic(com.kinly.famapp.ui.components.Haptic.Tick)
                                 startRecording()
                             }
                         },
@@ -194,7 +197,10 @@ fun ChatScreen(
             } else {
                 Box(
                     modifier = Modifier.size(46.dp).clip(CircleShape).background(Brush.linearGradient(AccentGradient))
-                        .clickable { viewModel.sendText(input); input = "" },
+                        .clickable {
+                            haptic(com.kinly.famapp.ui.components.Haptic.Confirm)
+                            viewModel.sendText(input); input = ""
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = "Отправить", tint = Color(0xFF0B1326), modifier = Modifier.size(20.dp))
