@@ -236,7 +236,7 @@ fun RealFamilyMemberCard(member: FamilyMember, isCurrentUser: Boolean, unread: I
             }
 
             if (!isCurrentUser) {
-                Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(vertical = 16.dp))
+                HorizontalDivider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(vertical = 16.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     Box(

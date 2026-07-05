@@ -188,7 +188,7 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                         }
                     }
 
-                    Divider(color = Color(0x1AFFFFFF))
+                    HorizontalDivider(color = Color(0x1AFFFFFF))
 
                     if (sorted.isEmpty()) {
                         Text(
@@ -206,13 +206,13 @@ fun ShoppingScreen(viewModel: ShoppingViewModel, productViewModel: ProductViewMo
                                 onDelete = { viewModel.deleteItem(item.id) }
                             )
                             if (index < sorted.size - 1) {
-                                Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
+                                HorizontalDivider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
                             }
                         }
                     }
 
                     if (items.any { it.isChecked }) {
-                        Divider(color = Color(0x1AFFFFFF))
+                        HorizontalDivider(color = Color(0x1AFFFFFF))
                         Row(
                             modifier = Modifier.fillMaxWidth().clickable { viewModel.clearChecked(currentList.id) }.padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -401,7 +401,7 @@ private fun InlineAddRow(
 
             // Подсказки из каталога
             if (suggestions.isNotEmpty()) {
-                Divider(color = Color(0x14FFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
+                HorizontalDivider(color = Color(0x14FFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
                 suggestions.forEach { product ->
                     val emoji = emojiForItem(product.name)
                     Row(

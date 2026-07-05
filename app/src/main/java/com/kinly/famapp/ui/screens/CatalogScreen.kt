@@ -112,7 +112,7 @@ fun CatalogScreen(viewModel: ProductViewModel) {
                             }
                         }
                         if (index < sorted.lastIndex) {
-                            Divider(color = Color(0x14FFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
+                            HorizontalDivider(color = Color(0x14FFFFFF), modifier = Modifier.padding(horizontal = 14.dp))
                         }
                     }
                 }

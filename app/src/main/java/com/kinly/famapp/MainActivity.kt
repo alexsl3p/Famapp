@@ -327,22 +327,30 @@ fun MainAppContent(
         notificationViewModel.load(profile.id)
     }
 
+    // В чате прячем верхнюю и нижнюю панели — полноэкранный диалог, как в мессенджерах.
+    val isChatOpen = currentRoute == Screen.Chat.route
+
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            KinlyTopBar(
-                userInitial = profile.initial,
-                avatarUrl = profile.avatarUrl,
-                unreadCount = notificationState.unreadCount,
-                onAvatarClick = { navController.navigate(Screen.Profile.route) },
-                onSettingsClick = { navController.navigate(Screen.Settings.route) }
-            )
+            if (!isChatOpen) {
+                KinlyTopBar(
+                    userInitial = profile.initial,
+                    avatarUrl = profile.avatarUrl,
+                    unreadCount = notificationState.unreadCount,
+                    onAvatarClick = { navController.navigate(Screen.Profile.route) },
+                    onSettingsClick = { navController.navigate(Screen.Settings.route) }
+                )
+            }
         },
         bottomBar = {
+            if (!isChatOpen) {
             BottomNavBar(
                 currentRoute = currentRoute,
                 familyUnread = familyUiState.totalUnread,
                 onItemSelected = { route ->
+                    // Повторный тап по текущей вкладке — ничего не делаем.
+                    if (route == currentRoute) return@BottomNavBar
                     // Запоминаем выбранную вкладку для восстановления после перезапуска.
                     tabStateViewModel.saveTab(route)
                     // Если открыт не-табовый экран (уведомления/профиль) — убираем его без
@@ -365,13 +373,17 @@ fun MainAppContent(
                 },
                 onVoiceClick = { showVoiceDialog = true }
             )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         NavHost(
             navController = navController,
             startDestination = startRoute,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier
+                .padding(paddingValues)
+                .consumeWindowInsets(paddingValues)
+                .imePadding()
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(

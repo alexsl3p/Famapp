@@ -103,7 +103,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
                         uiState.frequentProducts.forEachIndexed { index, product ->
                             FrequentProductRow(product, index + 1)
                             if (index < uiState.frequentProducts.size - 1) {
-                                Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
+                                HorizontalDivider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
                             }
                         }
                     }
@@ -127,7 +127,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
                         needsAttention.forEachIndexed { index, item ->
                             LowStockRow(item)
                             if (index < needsAttention.size - 1) {
-                                Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
+                                HorizontalDivider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
                             }
                         }
                     }
@@ -168,7 +168,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
                                     Text(days, color = Tertiary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 }
                                 if (index < uiState.cadence.size - 1) {
-                                    Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
+                                    HorizontalDivider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
                                 }
                             }
                     }

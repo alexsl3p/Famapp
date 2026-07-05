@@ -245,7 +245,7 @@ private fun InventoryStatusSection(
                     onDelete = { onDelete(item.id) }
                 )
                 if (index < items.size - 1) {
-                    Divider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(horizontal = 16.dp))
                 }
             }
         }

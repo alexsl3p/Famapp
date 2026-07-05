@@ -74,13 +74,24 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    private var channel: io.github.jan.supabase.realtime.RealtimeChannel? = null
+
     private fun subscribe() {
         viewModelScope.launch {
-            val channel = supabase.realtime.channel("chat-$meId-$chatKey")
-            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+            val ch = supabase.realtime.channel("chat-$meId-$chatKey")
+            channel = ch
+            ch.postgresChangeFlow<PostgresAction>(schema = "public") {
                 table = "messages"
             }.onEach { refresh() }.launchIn(this)
-            channel.subscribe()
+            ch.subscribe()
+        }
+    }
+
+    override fun onCleared() {
+        // Не оставляем подписку висеть после закрытия чата.
+        val ch = channel ?: return
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            runCatching { supabase.realtime.removeChannel(ch) }
         }
     }
 

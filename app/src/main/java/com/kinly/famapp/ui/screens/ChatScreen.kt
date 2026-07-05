@@ -1,6 +1,11 @@
 package com.kinly.famapp.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.media.MediaPlayer
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -54,8 +59,18 @@ fun ChatScreen(
     val listState = rememberLazyListState()
 
     LaunchedEffect(familyId, otherId) { viewModel.start(familyId, meId, otherId) }
+    // Первое открытие — мгновенно к последнему сообщению; новые — с плавной прокруткой.
+    var firstScrollDone by remember { mutableStateOf(false) }
     LaunchedEffect(state.messages.size) {
-        if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.size - 1)
+        if (state.messages.isNotEmpty()) {
+            if (firstScrollDone) listState.animateScrollToItem(state.messages.size - 1)
+            else { listState.scrollToItem(state.messages.size - 1); firstScrollDone = true }
+        }
+    }
+    // Клавиатура открылась — держим последнее сообщение на виду.
+    val imeVisible = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    LaunchedEffect(imeVisible) {
+        if (imeVisible && state.messages.isNotEmpty()) listState.scrollToItem(state.messages.size - 1)
     }
 
     var input by remember { mutableStateOf("") }
@@ -64,7 +79,26 @@ fun ChatScreen(
     val pickPhoto = rememberPhotoPicker { bytes -> viewModel.sendImage(bytes) }
     var fullscreen by remember { mutableStateOf<String?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    // Разрешение на микрофон: спрашиваем при первом тапе, после выдачи сразу начинаем запись.
+    val micPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted && recorder.start()) recording = true
+    }
+    val startRecording: () -> Unit = {
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            if (recorder.start()) recording = true
+        } else {
+            micPermLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+    // Уходим с экрана во время записи — не бросаем рекордер включённым.
+    DisposableEffect(Unit) { onDispose { recorder.cancel() } }
+
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         // Header
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
@@ -102,12 +136,21 @@ fun ChatScreen(
             }
         }
 
+        // Отправка фото/голосового — тонкий индикатор над полем ввода
+        if (state.isSending) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth().height(2.dp),
+                color = Primary,
+                trackColor = Color.Transparent
+            )
+        }
+
         // Input
         Row(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = pickPhoto) {
+            IconButton(onClick = pickPhoto, enabled = !state.isSending) {
                 Icon(Icons.Outlined.AddPhotoAlternate, contentDescription = "Фото", tint = Primary)
             }
             OutlinedTextField(
@@ -136,7 +179,7 @@ fun ChatScreen(
                                 val bytes = recorder.stop()
                                 if (bytes != null) viewModel.sendAudio(bytes)
                             } else {
-                                if (recorder.start()) recording = true
+                                startRecording()
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -226,7 +269,8 @@ private fun AudioPlayer(url: String, tint: Color) {
             .clickable {
                 runCatching {
                     if (playing) {
-                        player.pause(); playing = false
+                        // Кнопка «стоп» — останавливаем и начинаем сначала при следующем тапе.
+                        player.stop(); playing = false
                     } else {
                         player.reset()
                         player.setDataSource(context, android.net.Uri.parse(url))
